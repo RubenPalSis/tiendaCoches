@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" role="img" aria-label="Mivotunning">
+  <rect width="40" height="40" rx="8" fill="#0d0f13"/>
+  <path d="M7 29V11h4.2l4.3 9 4.3-9H24v18h-3.9V18.6l-3.3 6.9h-2.6l-3.3-6.9V29z" fill="#007bf9"/>
+  <path d="M25.5 11H34v3.4h-2.4V29h-3.7V14.4h-2.4z" fill="#f5122a"/>
+</svg>

@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /tiendaCoches/admin/
+Disallow: /tiendaCoches/carrito
+Disallow: /tiendaCoches/checkout
+Disallow: /tiendaCoches/pedido
+
+Sitemap: http://localhost:8000/tiendaCoches/sitemap.xml

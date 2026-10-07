@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="zw-mode" content="static">
+<meta name="zw-base" content="/tiendaCoches">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mivotunning | Accesorios tuning: lips, spoilers, difusores y más</title>
+<meta name="description" content="Accesorios de tuning para tu coche: lips, spoilers, alerones, difusores, taloneras y parrillas para BMW, Audi, Seat y más. Envíos a España y Portugal y pago seguro.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Mivotunning · Car Custom Garage">
+<meta property="og:description" content="Lips, spoilers, difusores, taloneras y parrillas para tu coche. Tu coche, tu estilo, nuestra pasión.">
+<meta property="og:locale" content="es_ES">
+<meta name="theme-color" content="#0D0F13">
+<link rel="icon" href="/tiendaCoches/assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/tiendaCoches/assets/fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/tiendaCoches/css/tokens.css">
+<link rel="stylesheet" href="/tiendaCoches/css/app.css">
+<script type="module" src="/tiendaCoches/js/pages/home.js"></script>
+</head>
+<body data-page="home">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<div id="site-header" class="site-header-slot"></div>
+
+<main id="main">
+  <section class="hero">
+    <div class="container hero__inner">
+      <div>
+        <p class="hero__kicker" id="hero-kicker">Tu coche, tu estilo, nuestra pasión</p>
+        <h1 class="hero__title" id="hero-title">Accesorios tuning <em>para tu coche</em></h1>
+        <p class="hero__lead" id="hero-lead">Lips, spoilers, alerones, difusores, taloneras y parrillas para BMW, Audi, Seat, Volkswagen y más. Busca por tu modelo de coche.</p>
+        <form class="search hero__search" role="search" action="/tiendaCoches/catalogo" data-search>
+          <label class="sr-only" for="hero-search">Buscar accesorios</label>
+          <input class="search__input" id="hero-search" name="q" type="search" autocomplete="off" enterkeyhint="search"
+            placeholder="Ej.: lip BMW E60, alerón Golf GTI…" role="combobox" aria-expanded="false" aria-controls="hero-suggest" aria-autocomplete="list">
+          <button class="search__btn" type="submit" aria-label="Buscar"><svg class="icon" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#search"></use></svg></button>
+          <div class="search__suggest" id="hero-suggest" role="listbox" hidden></div>
+        </form>
+        <div class="hero__hints" id="hero-hints"></div>
+        <div class="hero__stats hero__stats--row">
+          <div class="hero__stat"><svg class="icon" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#truck"></use></svg><strong>Envío con GLS</strong><span id="hero-shipping">A toda España y Portugal</span></div>
+          <div class="hero__stat"><svg class="icon" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#lock"></use></svg><strong>Pago seguro</strong><span>Tarjeta, Apple Pay y Google Pay</span></div>
+          <div class="hero__stat"><svg class="icon" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#users"></use></svg><strong>Trato directo</strong><span>Te asesoramos antes de comprar</span></div>
+      </div>
+      </div>
+      <div class="hero__visual"><img id="hero-image" src="/tiendaCoches/assets/img/brand/hero.webp" alt="" width="420" height="420" fetchpriority="high"></div>
+    </div>
+  </section>
+
+  <section class="section container" id="categories-section" hidden>
+    <div class="section__head">
+      <h2 class="section__title">Categorías</h2>
+      <a class="section__link" href="/tiendaCoches/catalogo">Ver todo <svg class="icon icon--sm" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#arrow-right"></use></svg></a>
+    </div>
+    <div class="cat-grid" id="categories"></div>
+  </section>
+
+  <section class="section container" id="featured-section">
+    <div class="section__head">
+      <h2 class="section__title">Destacados</h2>
+      <a class="section__link" href="/tiendaCoches/catalogo">Ver catálogo <svg class="icon icon--sm" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#arrow-right"></use></svg></a>
+    </div>
+    <div class="grid grid--products" id="featured"><div class="card card--skeleton" aria-hidden="true"><div class="card__media"></div><div class="card__body"><div class="sk-line"></div><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%;height:20px"></div></div></div><div class="card card--skeleton" aria-hidden="true"><div class="card__media"></div><div class="card__body"><div class="sk-line"></div><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%;height:20px"></div></div></div><div class="card card--skeleton" aria-hidden="true"><div class="card__media"></div><div class="card__body"><div class="sk-line"></div><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%;height:20px"></div></div></div><div class="card card--skeleton" aria-hidden="true"><div class="card__media"></div><div class="card__body"><div class="sk-line"></div><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%;height:20px"></div></div></div></div>
+  </section>
+
+  <section class="section container" id="offers-section" hidden>
+    <div class="section__head">
+      <h2 class="section__title">Ofertas</h2>
+      <a class="section__link" href="/tiendaCoches/catalogo?ofertas=1">Ver ofertas <svg class="icon icon--sm" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#arrow-right"></use></svg></a>
+    </div>
+    <div class="grid grid--products" id="offers"></div>
+  </section>
+
+  <section class="section container" id="recent-section" hidden>
+    <div class="section__head">
+      <h2 class="section__title">Novedades</h2>
+      <a class="section__link" href="/tiendaCoches/catalogo?orden=recientes">Ver más <svg class="icon icon--sm" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#arrow-right"></use></svg></a>
+    </div>
+    <div class="grid grid--products" id="recent"></div>
+  </section>
+
+  <section class="section container section--tight">
+    <div class="benefits">
+      <div class="benefit">
+        <span class="benefit__icon"><svg class="icon" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#truck"></use></svg></span>
+        <h3 class="benefit__title">Envío con GLS</h3>
+        <p class="benefit__text" id="benefit-shipping">Recibe tu pedido con seguimiento online.</p>
+      </div>
+      <div class="benefit">
+        <span class="benefit__icon"><svg class="icon" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#lock"></use></svg></span>
+        <h3 class="benefit__title">Pago seguro</h3>
+        <p class="benefit__text">Pago cifrado con Stripe. Nunca vemos ni guardamos los datos de tu tarjeta.</p>
+      </div>
+      <div class="benefit">
+        <span class="benefit__icon"><svg class="icon" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#return"></use></svg></span>
+        <h3 class="benefit__title">14 días para desistir</h3>
+        <p class="benefit__text">Si cambias de opinión, puedes desistir de la compra. <a href="/tiendaCoches/legal/devoluciones">Ver condiciones</a>.</p>
+      </div>
+      <div class="benefit">
+        <span class="benefit__icon"><svg class="icon" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#package"></use></svg></span>
+        <h3 class="benefit__title">Compra sin registro</h3>
+        <p class="benefit__text">No necesitas crear una cuenta: solo tus datos de envío.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section info-band">
+    <div class="container split">
+      <div>
+        <h2 class="section__title">Así funciona tu envío</h2>
+        <ol class="steps" style="margin-top:20px">
+          <li><div><strong>Haces tu pedido y pagas de forma segura</strong><span>Recibes la confirmación por email al momento.</span></div></li>
+          <li><div><strong>Preparamos y embalamos tu pieza</strong><span>Revisamos el pedido antes de enviarlo.</span></div></li>
+          <li><div><strong>Lo entregamos a GLS</strong><span>Te enviamos el número de seguimiento para que sepas dónde está.</span></div></li>
+          <li><div><strong>Lo recibes en tu dirección</strong><span id="steps-delivery">En el plazo habitual de GLS para tu zona.</span></div></li>
+        </ol>
+      </div>
+      <div>
+        <h2 class="section__title">Pagos</h2>
+        <p style="margin-top:20px">Pagas en la plataforma segura de <strong>Stripe</strong>, uno de los procesadores de pago más utilizados del mundo. Aceptamos:</p>
+        <div class="payment-logos" style="margin-bottom:16px">
+          <span class="payment-logo">VISA</span><span class="payment-logo">Mastercard</span><span class="payment-logo">Apple Pay</span><span class="payment-logo">Google Pay</span>
+        </div>
+        <p class="muted" style="font-size:.92rem">Tu pedido solo se confirma cuando el pago se ha completado correctamente. Recibirás un email con el resumen y un enlace para consultar el estado de tu pedido.</p>
+        <a class="section__link" href="/tiendaCoches/legal/pagos">Más información sobre pagos <svg class="icon icon--sm" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#arrow-right"></use></svg></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container">
+    <div class="cta-band">
+      <div>
+        <h2>¿No encuentras la pieza para tu coche?</h2>
+        <p>Dinos marca, modelo y año y te ayudamos a encontrarla.</p>
+      </div>
+      <a class="btn btn--lg" href="/tiendaCoches/contacto" id="cta-contact">Contactar</a>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+</body>
+</html>

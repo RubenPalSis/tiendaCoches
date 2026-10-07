@@ -15,7 +15,4 @@ service-account*.json
 test-results/
 playwright-report/
 tests/e2e/screenshots/
-.DS_Store
-functions/.env
-data/
-_site/
+

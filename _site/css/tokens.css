@@ -1,0 +1,88 @@
+/* ==========================================================================
+   Identidad visual de la tienda. Para otro cliente de ZetaWeb, cambiar solo este
+   archivo (colores, tipografías, radios) y /assets/img/logo.svg + favicon.svg.
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Barlow Condensed';
+  src: url('/tiendaCoches/assets/fonts/barlow-condensed-600.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  src: url('/tiendaCoches/assets/fonts/barlow-condensed-700.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/tiendaCoches/assets/fonts/inter-variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/tiendaCoches/assets/fonts/jetbrains-mono-500.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+
+:root {
+  /* Marca */
+  --c-ink: #0d0f13;          /* negro garaje: header, footer, panel */
+  --c-steel: #1b1f27;
+  --c-steel-2: #2c323d;
+  --c-accent: #d40c25;       /* rojo Mivotunning (AA sobre blanco) */
+  --c-accent-hover: #b0081d;
+  --c-accent-bright: #ff3348;/* rojo sobre fondos oscuros */
+  --c-accent-soft: #fff0f2;
+  --c-brand-blue: #007bf9;   /* azul Mivotunning */
+  --c-brand-blue-text: #0062cc;
+
+  /* Neutros */
+  --c-bg: #f4f5f7;
+  --c-surface: #ffffff;
+  --c-surface-2: #f9fafb;
+  --c-line: #e3e6ea;
+  --c-line-strong: #cfd4da;
+  --c-text: #1b1f24;
+  --c-muted: #5d6470;
+  --c-on-dark: #e8eaed;
+  --c-on-dark-muted: #a3aab5;
+
+  /* Estados */
+  --c-success: #15803d;
+  --c-success-soft: #e8f6ee;
+  --c-warning: #a3500a;
+  --c-warning-soft: #fff6e5;
+  --c-danger: #c62828;
+  --c-danger-soft: #fdecec;
+  --c-info: #1d4ed8;
+  --c-info-soft: #eaf0ff;
+
+  /* Tipografía */
+  --f-display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --f-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* Forma */
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
+  --shadow: 0 4px 16px rgb(16 24 40 / 0.08);
+  --shadow-lg: 0 18px 48px rgb(16 24 40 / 0.18);
+
+  /* Layout */
+  --container: 1280px;
+  --gutter: 16px;
+  --header-h: 112px;
+}
+
+@media (min-width: 960px) {
+  :root {
+    --gutter: 24px;
+    --header-h: 132px;
+  }
+}
