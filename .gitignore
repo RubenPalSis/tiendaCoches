@@ -11,8 +11,5 @@ database-debug.log
 pubsub-debug.log
 emulator-data/
 service-account*.json
-*-firebase-adminsdk-*.json
-test-results/
-playwright-report/
-tests/e2e/screenshots/
+
 
