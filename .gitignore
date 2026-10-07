@@ -1,15 +1,4 @@
-node_modules/
-functions/src/shared/
-functions/.secret.local
-functions/.env.local
-*.local
-.firebase/
-firebase-debug*.log
-firestore-debug.log
-ui-debug.log
-database-debug.log
-pubsub-debug.log
-emulator-data/
-service-account*.json
+
+
 
 
