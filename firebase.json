@@ -1,0 +1,170 @@
+{
+  "hosting": {
+    "public": "public",
+    "cleanUrls": true,
+    "trailingSlash": false,
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/fn/adminAction",
+        "function": {
+          "functionId": "adminAction",
+          "region": "europe-west1"
+        }
+      },
+      {
+        "source": "/fn/syncAdminClaim",
+        "function": {
+          "functionId": "syncAdminClaim",
+          "region": "europe-west1"
+        }
+      },
+      {
+        "source": "/api/**",
+        "function": {
+          "functionId": "api",
+          "region": "europe-west1"
+        }
+      },
+      {
+        "source": "/producto/**",
+        "function": {
+          "functionId": "seo",
+          "region": "europe-west1"
+        }
+      },
+      {
+        "source": "/categoria/**",
+        "function": {
+          "functionId": "seo",
+          "region": "europe-west1"
+        }
+      },
+      {
+        "source": "/sitemap.xml",
+        "function": {
+          "functionId": "seo",
+          "region": "europe-west1"
+        }
+      },
+      {
+        "source": "/robots.txt",
+        "function": {
+          "functionId": "seo",
+          "region": "europe-west1"
+        }
+      },
+      {
+        "source": "/admin/**",
+        "destination": "/admin/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(self), microphone=(), geolocation=(), payment=()"
+          },
+          {
+            "key": "Strict-Transport-Security",
+            "value": "max-age=31536000; includeSubDomains"
+          },
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self'; script-src 'self' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://firebasestorage.googleapis.com https://storage.googleapis.com http://127.0.0.1:9199 http://localhost:9199; font-src 'self'; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firebasestorage.googleapis.com https://www.gstatic.com http://127.0.0.1:9099 http://localhost:9099 http://127.0.0.1:8080 http://localhost:8080 http://127.0.0.1:9199 http://localhost:9199; frame-src 'self' https://*.firebaseapp.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(css|js)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=600"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(woff2|svg|webp|png|jpg|ico)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=2592000"
+          }
+        ]
+      },
+      {
+        "source": "/admin/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-store"
+          },
+          {
+            "key": "X-Robots-Tag",
+            "value": "noindex, nofollow"
+          }
+        ]
+      }
+    ]
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "nodejs22",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.local",
+        "test"
+      ],
+      "predeploy": [
+        "node \"$PROJECT_DIR/scripts/copy-shared.js\""
+      ]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "functions": {
+      "port": 5001
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "storage": {
+      "port": 9199
+    },
+    "hosting": {
+      "port": 5000
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    },
+    "singleProjectMode": true
+  }
+}

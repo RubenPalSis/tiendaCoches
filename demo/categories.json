@@ -1,0 +1,47 @@
+[
+ {
+  "id": "lips-spoilers",
+  "name": "Lips y spoilers",
+  "order": 1,
+  "description": "Lips, labios y spoilers delanteros, alerones y spoilers traseros para dar un aspecto deportivo a tu coche.",
+  "slug": "lips-spoilers",
+  "image": "",
+  "active": true
+ },
+ {
+  "id": "difusores",
+  "name": "Difusores y paragolpes",
+  "order": 2,
+  "description": "Difusores traseros y paragolpes deportivos.",
+  "slug": "difusores",
+  "image": "",
+  "active": true
+ },
+ {
+  "id": "taloneras",
+  "name": "Taloneras y body kits",
+  "order": 3,
+  "description": "Taloneras, faldones laterales y body kits completos.",
+  "slug": "taloneras",
+  "image": "",
+  "active": true
+ },
+ {
+  "id": "parrillas",
+  "name": "Parrillas y calandras",
+  "order": 4,
+  "description": "Parrillas, calandras y rejillas deportivas.",
+  "slug": "parrillas",
+  "image": "",
+  "active": true
+ },
+ {
+  "id": "accesorios-exterior",
+  "name": "Accesorios exterior",
+  "order": 6,
+  "description": "Carcasas de retrovisor, aletas y otros accesorios exteriores.",
+  "slug": "accesorios-exterior",
+  "image": "",
+  "active": true
+ }
+]

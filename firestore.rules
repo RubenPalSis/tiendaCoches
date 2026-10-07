@@ -1,0 +1,110 @@
+rules_version = '2';
+
+// Modelo de seguridad:
+// - La tienda pública NO lee Firestore directamente: usa /api (Cloud Functions + Admin SDK),
+//   así nadie puede descargar la base de datos ni generar lecturas masivas.
+// - El panel lee/escribe con el SDK de cliente y solo si el usuario tiene el custom claim admin == true.
+// - Pedidos, contadores, índice y estadísticas solo los escriben las Functions.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    function str(v, min, max) {
+      return v is string && v.size() >= min && v.size() <= max;
+    }
+
+    function optStr(data, key, max) {
+      return !(key in data) || str(data[key], 0, max);
+    }
+
+    function intIn(v, min, max) {
+      return v is int && v >= min && v <= max;
+    }
+
+    function validImages(list) {
+      return list is list && list.size() <= 8;
+    }
+
+    function validProduct(d) {
+      return d.keys().hasOnly([
+          'name', 'slug', 'description', 'reference', 'brand', 'model', 'compatibility',
+          'categoryId', 'price', 'comparePrice', 'stock', 'reserved', 'soldCount', 'weight',
+          'images', 'active', 'featured', 'condition', 'conditionNotes', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll(['name', 'slug', 'price', 'stock', 'reserved', 'soldCount', 'active', 'images', 'createdAt', 'updatedAt'])
+        && str(d.name, 2, 150)
+        && str(d.slug, 2, 120) && d.slug.matches('^[A-Za-z0-9-]+$')
+        && intIn(d.price, 0, 10000000)
+        && (!('comparePrice' in d) || d.comparePrice == null || intIn(d.comparePrice, 0, 10000000))
+        && intIn(d.stock, 0, 100000)
+        && (!('weight' in d) || intIn(d.weight, 0, 1000000))
+        && validImages(d.images)
+        && d.active is bool
+        && (!('featured' in d) || d.featured is bool)
+        && (!('condition' in d) || d.condition in ['new', 'used', 'refurbished'])
+        && optStr(d, 'description', 6000)
+        && optStr(d, 'reference', 80)
+        && optStr(d, 'brand', 80)
+        && optStr(d, 'model', 120)
+        && optStr(d, 'compatibility', 2000)
+        && optStr(d, 'conditionNotes', 300)
+        && optStr(d, 'categoryId', 80)
+        && d.createdAt is timestamp
+        && d.updatedAt == request.time;
+    }
+
+    match /products/{productId} {
+      allow read: if isAdmin();
+      // reserved y soldCount solo los modifica el backend (reservas y ventas).
+      allow create: if isAdmin() && validProduct(request.resource.data)
+        && request.resource.data.reserved == 0 && request.resource.data.soldCount == 0;
+      allow update: if isAdmin() && validProduct(request.resource.data)
+        && request.resource.data.reserved == resource.data.reserved
+        && request.resource.data.soldCount == resource.data.soldCount
+        && request.resource.data.createdAt == resource.data.createdAt;
+      // No se puede borrar un producto con unidades reservadas en un pago en curso.
+      allow delete: if isAdmin() && resource.data.reserved == 0;
+    }
+
+    function validCategory(d) {
+      return d.keys().hasOnly(['name', 'slug', 'description', 'order', 'image', 'active', 'createdAt', 'updatedAt'])
+        && str(d.name, 2, 80)
+        && str(d.slug, 2, 80) && d.slug.matches('^[a-z0-9-]+$')
+        && optStr(d, 'description', 600)
+        && optStr(d, 'image', 1000)
+        && intIn(d.order, 0, 10000)
+        && d.active is bool
+        && d.createdAt is timestamp
+        && d.updatedAt == request.time;
+    }
+
+    match /categories/{categoryId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && validCategory(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{name} {
+      allow read: if isAdmin();
+      allow write: if isAdmin() && name in ['store', 'shipping', 'checkout']
+        && request.resource.data.size() <= 60;
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAdmin();
+      allow write: if false; // solo Cloud Functions (adminAction, checkout, webhook)
+    }
+
+    match /statistics/{day} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // catalog, counters, stripeEvents y cualquier otra colección: sin acceso desde el cliente.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

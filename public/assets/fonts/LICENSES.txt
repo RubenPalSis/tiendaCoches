@@ -1,0 +1,5 @@
+Fuentes con licencia SIL Open Font License 1.1 (uso comercial permitido):
+- Barlow Condensed (Jeremy Tribby)
+- Inter (Rasmus Andersson)
+- JetBrains Mono (JetBrains)
+Obtenidas de Fontsource (subconjunto latino). Autoalojadas para no enviar la IP de los visitantes a terceros.

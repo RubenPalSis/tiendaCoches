@@ -1,0 +1,27 @@
+{
+  "store": {
+    "name": "Mivotunning",
+    "tagline": "Car Custom Garage",
+    "logoUrl": "/assets/img/brand/logo.webp",
+    "ogImage": "/assets/img/brand/og.jpg",
+    "instagram": "mivotunning94",
+    "about": "Accesorios y piezas de tuning para tu coche: lips, spoilers, difusores, taloneras y parrillas. Tu coche, tu estilo, nuestra pasión.",
+    "topbar": ["Calidad garantizada", "Envíos a toda España y Portugal", "Amplio catálogo", "Atención personalizada"],
+    "ownerName": "",
+    "taxId": "",
+    "address": "",
+    "email": "",
+    "phone": "",
+    "whatsapp": "",
+    "usedWarranty": ""
+  },
+  "shipping": {
+    "carrier": "GLS",
+    "configured": false,
+    "zones": [
+      { "id": "peninsula", "name": "Península", "active": true, "countries": ["ES"], "postalPrefixes": [], "excludePostalPrefixes": ["07", "35", "38", "51", "52"], "rates": [], "freeOver": 0, "deliveryTime": "24–72 h laborables" },
+      { "id": "portugal", "name": "Portugal", "active": true, "countries": ["PT"], "postalPrefixes": [], "excludePostalPrefixes": [], "rates": [], "freeOver": 0, "deliveryTime": "" }
+    ]
+  },
+  "checkout": { "enabled": false, "maxQtyPerLine": 10 }
+}
