@@ -22,3 +22,6 @@ pubsub-debug.log
 test-results/
 playwright-report/
 tests/e2e/screenshots/
+
+# Copia de demo/img que se publica con la web (la genera scripts/copy-shared.js)
+public/media/

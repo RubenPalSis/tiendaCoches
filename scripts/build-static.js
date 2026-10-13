@@ -48,7 +48,7 @@ const catalog = {
 
 // ---------- Archivos ----------
 rmSync(OUT, { recursive: true, force: true });
-cpSync(join(ROOT, 'public'), OUT, { recursive: true });
+cpSync(join(ROOT, 'public'), OUT, { recursive: true, filter: (src) => !src.includes(`${join(ROOT, 'public', 'media')}`) });
 cpSync(join(ROOT, 'demo/img'), join(OUT, 'demo/img'), { recursive: true });
 writeFileSync(join(OUT, 'demo/catalog.json'), JSON.stringify(catalog));
 
