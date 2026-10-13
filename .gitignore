@@ -1,4 +1,24 @@
+# Dependencias y estado local
+node_modules/
+.wrangler/
+emulator-data/
+.DS_Store
 
+# Secretos: NUNCA al repositorio (es público)
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.local
+.env
+service-account*.json
+*-firebase-adminsdk-*.json
 
-
-
+# Registros y resultados de pruebas
+firebase-debug*.log
+firestore-debug.log
+ui-debug.log
+database-debug.log
+pubsub-debug.log
+test-results/
+playwright-report/
+tests/e2e/screenshots/
