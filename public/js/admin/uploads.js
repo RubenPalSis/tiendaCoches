@@ -1,37 +1,36 @@
-import { storage, st } from './firebase.js';
-import { processImage } from './image-processor.js';
-import { slugify } from '../shared/slug.js';
+// Fotos en Cloudinary (plan gratuito). El navegador reduce la foto y la sube directamente a Cloudinary
+// con una firma que solo da el servidor a los administradores; las versiones pequeñas se piden por URL.
+import { adminAction } from './firebase.js';
+import { processImage, SIZES } from './image-processor.js';
 
-const CACHE = 'public, max-age=31536000, immutable';
-
-// Las fotos son públicas (reglas de Storage): guardamos la URL sin token para que sea estable.
-function publicUrl(downloadUrl) {
-  const url = new URL(downloadUrl);
-  url.searchParams.delete('token');
-  return url.toString();
-}
+/** URL de Cloudinary con el ancho máximo indicado (c_limit no amplía fotos pequeñas). */
+export const sizedUrl = (url, width) => url.replace('/upload/', `/upload/c_limit,w_${width}/`);
 
 /**
- * Procesa y sube una foto en 3 tamaños.
+ * Procesa y sube una foto.
  * @param folder 'products/<id>' o 'store'
- * @returns {Promise<{ sm, md, lg, paths: { sm, md, lg } }>}
+ * @returns {Promise<{ sm, md, lg, publicId }>}
  */
 export async function uploadImage(folder, baseName, file) {
   const processed = await processImage(file);
-  const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const name = `${slugify(baseName, 50) || 'foto'}-${stamp}`;
-  const result = { paths: {} };
-  for (const size of ['sm', 'md', 'lg']) {
-    const path = `${folder}/${name}-${size}.${processed.ext}`;
-    const ref = st.ref(storage, path);
-    await st.uploadBytes(ref, processed[size], { contentType: processed.type, cacheControl: CACHE });
-    result[size] = publicUrl(await st.getDownloadURL(ref));
-    result.paths[size] = path;
+  const { uploadUrl, fields } = await adminAction('mediaUploadParams', { folder, name: baseName });
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, v);
+  form.append('file', processed.blob, `foto.${processed.ext}`);
+  let res;
+  try {
+    res = await fetch(uploadUrl, { method: 'POST', body: form });
+  } catch {
+    throw new Error('No se pudo subir la foto. Comprueba la conexión e inténtalo de nuevo.');
   }
-  return result;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.secure_url) throw new Error(data.error?.message || 'No se pudo subir la foto.');
+  return { sm: sizedUrl(data.secure_url, SIZES.sm), md: sizedUrl(data.secure_url, SIZES.md), lg: data.secure_url, publicId: data.public_id };
 }
 
-export async function deleteImage(image) {
-  const paths = Object.values(image?.paths ?? {});
-  await Promise.all(paths.map((p) => st.deleteObject(st.ref(storage, p)).catch(() => {})));
+/** Borra fotos de Cloudinary (al quitarlas de una pieza o eliminarla). No lanza: una foto huérfana no es grave. */
+export async function deleteImages(images) {
+  const publicIds = images.map((img) => img?.publicId).filter(Boolean);
+  if (!publicIds.length) return;
+  await adminAction('mediaDelete', { publicIds }).catch(() => {});
 }

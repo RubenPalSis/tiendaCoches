@@ -1,4 +1,4 @@
-// Cliente de la API pública (/tiendaCoches/api → Cloud Functions vía Firebase Hosting).
+// Cliente de la API pública (/tiendaCoches/api → servidor de la tienda en Cloudflare Workers).
 
 export class ApiError extends Error {
   constructor(message, { status = 0, code = 'network', details } = {}) {

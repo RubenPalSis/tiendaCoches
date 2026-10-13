@@ -20,7 +20,7 @@ const ORIGIN = (process.env.SITE_ORIGIN ?? 'http://localhost:8000').replace(/\/$
 const SITE = ORIGIN + BASE;
 
 execFileSync(process.execPath, [join(ROOT, 'scripts/copy-shared.js')], { stdio: 'ignore' });
-const { productPage, categoryPage, notFoundPage } = await import('../functions/src/seo/pages.js');
+const { productPage, categoryPage, notFoundPage } = await import('../server/src/seo/pages.js');
 const { toIndexEntry, toCategoryEntry } = await import('../public/js/shared/catalog.js');
 const { productPath, categoryPath } = await import('../public/js/shared/slug.js');
 

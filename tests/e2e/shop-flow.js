@@ -18,7 +18,7 @@ page.on('response', (r) => { if (r.status() >= 500 && !(r.status() === 503 && r.
 const shot = (n) => page.screenshot({ path: `${OUT}shop_${n}_${width}.png`, fullPage: process.env.FULL === '1' });
 const step = (m) => console.log(`✔ ${m}`);
 
-const { db } = await import('../../functions/src/lib/firebase.js');
+const { db } = await import('../../server/src/lib/firebase.js');
 // Preparación: un producto con 3 unidades (para probar cantidades) y otro agotado (vendido).
 const all = (await db.collection('products').orderBy('createdAt', 'desc').get()).docs;
 const multi = all.find((d) => /audi/i.test(d.data().name)) ?? all[0];
@@ -27,6 +27,9 @@ const single = all.find((d) => ![multi.id, soldOut.id].includes(d.id));
 await multi.ref.update({ stock: 3 });
 await soldOut.ref.update({ stock: 0, soldCount: 1 });
 await single.ref.update({ stock: 1 });
+// Como hace el panel tras guardar: actualizar el índice público del catálogo.
+const { syncProductsInIndex } = await import('../../server/src/catalog/catalog-index.js');
+await syncProductsInIndex([multi.id, soldOut.id, single.id]);
 await page.waitForTimeout(31_000); // caché de 30 s del catálogo en el servidor
 
 // Búsqueda con sugerencias
@@ -135,12 +138,12 @@ assert.match(await page.textContent('#form-error'), /pagos todavía no están co
 step('sin claves de Stripe: error claro y sin cobrar (esperado en local)');
 
 // Página de pedido pagado (simulamos el webhook)
-const { createPendingOrder, markOrderPaid } = await import('../../functions/src/orders/order-service.js');
+const { createPendingOrder, markOrderPaid } = await import('../../server/src/orders/order-service.js');
 // Stock real (el catálogo público puede estar en caché).
 const prod = { id: multi.id };
 const shippingRules = (await db.doc('settings/shipping').get()).data();
 // El emulador puede devolver "lock timeout" si otra transacción acaba de tocar los mismos documentos.
-const retry = async (fn, n = 4) => { for (let i = 1; ; i++) { try { return await fn(); } catch (e) { if (i >= n || e.code !== 10) throw e; await new Promise((r) => setTimeout(r, 1500)); } } };
+const retry = async (fn, n = 4) => { for (let i = 1; ; i++) { try { return await fn(); } catch (e) { if (i >= n || !(e.code === 10 || e.code === 'ABORTED' || e.status === 409)) throw e; await new Promise((r) => setTimeout(r, 1500)); } } };
 const created = await retry(() => createPendingOrder({
   items: [{ id: prod.id, qty: 1 }], origin: BASE, termsVersion: '1',
   customer: { firstName: 'Laura', lastName: 'García', email: 'laura@test.com', phone: '600123123' },

@@ -1,5 +1,6 @@
 // Acceso a datos del panel con caché en memoria durante la sesión (menos lecturas de Firestore).
-import { db, fs } from './firebase.js';
+import { db, fs, adminAction } from './firebase.js';
+import { toast } from './ui.js';
 
 let productsCache = null;
 let categoriesCache = null;
@@ -46,3 +47,23 @@ export async function getSettingsDoc(name) {
 }
 
 export const saveSettingsDoc = (name, data) => fs.setDoc(fs.doc(db, 'settings', name), data);
+
+// El índice público del catálogo lo actualiza el servidor (en el plan gratuito de Firebase no hay
+// disparadores). Si falla, lo guardado no se pierde: la tarea horaria reconstruye el índice.
+const INDEX_LATER = 'Guardado. La tienda puede tardar hasta 1 hora en mostrar el cambio (no se pudo avisar al servidor).';
+
+export async function syncProductIndex(id) {
+  try {
+    await adminAction('syncProducts', { ids: [id] });
+  } catch {
+    toast(INDEX_LATER, { type: 'error', timeout: 8000 });
+  }
+}
+
+export async function syncCategoryIndex() {
+  try {
+    await adminAction('syncCategories');
+  } catch {
+    toast(INDEX_LATER, { type: 'error', timeout: 8000 });
+  }
+}

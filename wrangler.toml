@@ -1,0 +1,55 @@
+# Cloudflare Workers (plan gratuito): sirve la web (/public) y el servidor de la tienda (server/src).
+# Publicar: npx wrangler deploy   ·   Desarrollo local: npm run dev (usa [env.dev] con los emuladores)
+name = "tienda"
+main = "server/src/worker.js"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "public"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash" # /catalogo → catalogo.html
+not_found_handling = "404-page"
+# Solo estas rutas ejecutan el Worker; el resto (HTML, CSS, JS, fuentes) lo sirve Cloudflare sin gastar peticiones.
+run_worker_first = ["/api/*", "/fn/*", "/stripe/*", "/producto/*", "/categoria/*", "/sitemap.xml", "/robots.txt", "/__/*", "/dev-media/*"]
+
+# Tarea horaria: reservas caducadas, administradores retirados y reconstrucción del índice del catálogo.
+[triggers]
+crons = ["0 * * * *"]
+
+[observability]
+enabled = true
+
+# Valores públicos. Los secretos NO van aquí: `npx wrangler secret put NOMBRE`
+# (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, BREVO_API_KEY, CLOUDINARY_API_SECRET, FIREBASE_SERVICE_ACCOUNT).
+[vars]
+SITE_URL = ""                 # p. ej. "https://www.mitienda.es" (vacío = dominio de la petición)
+ADMIN_EMAILS = ""             # emails del panel separados por comas
+FIREBASE_PROJECT_ID = ""
+FIREBASE_WEB_CONFIG = ""      # JSON de Firebase → Configuración del proyecto → Tus apps → Web (es público)
+CLOUDINARY_CLOUD_NAME = ""
+CLOUDINARY_API_KEY = ""
+CLOUDINARY_FOLDER = "tienda"
+
+# ---------- Desarrollo local (npm run dev): emuladores de Firebase y fotos simuladas ----------
+[env.dev]
+name = "tienda-dev"
+workers_dev = false
+triggers = { crons = [] }
+
+[env.dev.vars]
+SITE_URL = ""
+ADMIN_EMAILS = "admin@demo.test,otro-admin@demo.test,sin-verificar@demo.test"
+FIREBASE_PROJECT_ID = "demo-tienda"
+FIREBASE_WEB_CONFIG = ""
+FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080"
+FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9099"
+CLOUDINARY_CLOUD_NAME = ""
+CLOUDINARY_API_KEY = ""
+CLOUDINARY_FOLDER = "tienda"
+
+# Almacén de fotos simulado: solo existe en local (wrangler dev lo guarda en .wrangler/state).
+[[env.dev.kv_namespaces]]
+binding = "DEV_MEDIA"
+id = "dev-media-local"

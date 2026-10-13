@@ -1,5 +1,6 @@
 // Comprime y redimensiona las fotos EN EL NAVEGADOR antes de subirlas (gratis y rápido desde el móvil).
-// Genera 3 tamaños: sm (400 px), md (800 px) y lg (1600 px) en WebP (JPEG si el navegador no lo soporta).
+// Se sube una sola versión de 1600 px en WebP (JPEG si el navegador no lo soporta); las de 400 y 800 px
+// las genera Cloudinary al pedirlas por URL (ver uploads.js).
 export const SIZES = { sm: 400, md: 800, lg: 1600 };
 
 async function loadBitmap(file) {
@@ -35,14 +36,12 @@ async function resize(bitmap, maxSide) {
   return blob;
 }
 
-/** @returns {Promise<{ sm: Blob, md: Blob, lg: Blob, ext: string, type: string }>} */
+/** @returns {Promise<{ blob: Blob, ext: string, type: string }>} */
 export async function processImage(file) {
   if (!file.type.startsWith('image/')) throw new Error(`"${file.name}" no es una imagen.`);
   if (file.size > 25 * 1024 * 1024) throw new Error(`"${file.name}" es demasiado grande (máx. 25 MB).`);
   const bitmap = await loadBitmap(file);
-  const out = {};
-  for (const [key, side] of Object.entries(SIZES)) out[key] = await resize(bitmap, side);
+  const blob = await resize(bitmap, SIZES.lg);
   bitmap.close?.();
-  const type = out.lg.type;
-  return { ...out, type, ext: type === 'image/webp' ? 'webp' : 'jpg' };
+  return { blob, type: blob.type, ext: blob.type === 'image/webp' ? 'webp' : 'jpg' };
 }

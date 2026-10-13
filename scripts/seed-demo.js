@@ -1,9 +1,9 @@
 // Datos de demostración para los EMULADORES (nunca contra producción).
-// Uso: con `npm run dev` en marcha, ejecutar `npm run seed` en otra terminal.
+// Uso: con `npm run dev` en marcha (emuladores + Worker en :5000), ejecutar `npm run seed` en otra terminal.
+// Las fotos se suben al almacén simulado del Worker de desarrollo (como si fuera Cloudinary).
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
-import { getStorage } from 'firebase-admin/storage';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,17 +12,17 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 process.env.FIRESTORE_EMULATOR_HOST ??= '127.0.0.1:8080';
 process.env.FIREBASE_AUTH_EMULATOR_HOST ??= '127.0.0.1:9099';
-process.env.FIREBASE_STORAGE_EMULATOR_HOST ??= '127.0.0.1:9199';
 const projectId = process.env.GCLOUD_PROJECT || 'demo-tienda';
 if (!projectId.startsWith('demo-')) {
   console.error('Este script solo se ejecuta contra proyectos demo de los emuladores.');
   process.exit(1);
 }
 
-initializeApp({ projectId, storageBucket: `${projectId}.appspot.com` });
+initializeApp({ projectId });
+process.env.GCLOUD_PROJECT = projectId;
 const db = getFirestore();
 const auth = getAuth();
-const bucket = getStorage().bucket();
+const WORKER = process.env.BASE_URL || 'http://127.0.0.1:5000';
 
 const ADMIN = { email: 'admin@demo.test', password: 'demo1234' };
 
@@ -42,20 +42,19 @@ async function main() {
     batch.set(db.doc(`categories/${c.id}`), { name: c.name, slug: c.slug, description: c.description, order: c.order, image: '', active: true, createdAt: now, updatedAt: now });
   }
 
-  // Fotos al emulador de Storage (mismas URLs que usaría el panel).
-  const url = (path) => `http://127.0.0.1:9199/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media`;
+  // Fotos al almacén simulado del Worker (mismas URLs y tamaños que con Cloudinary).
+  const sized = (url, w) => url.replace('/upload/', `/upload/c_limit,w_${w}/`);
   for (const p of products) {
     const images = [];
     for (const img of p.images) {
-      const out = { paths: {} };
-      for (const size of ['sm', 'md', 'lg']) {
-        const file = img[size].replace('/demo/img/', '');
-        const path = `products/${p.id}/${file.replace(/-md\.webp$/, size === 'lg' ? '-lg.webp' : '-md.webp')}`;
-        await bucket.file(path).save(readFileSync(join(ROOT, 'demo/img', file)), { contentType: 'image/webp', metadata: { cacheControl: 'public, max-age=31536000' } });
-        out[size] = url(path);
-        out.paths[size] = path;
-      }
-      images.push(out);
+      const file = img.lg.replace('/demo/img/', '');
+      const form = new FormData();
+      form.append('public_id', `tienda/products/${p.id}/${file.replace(/\.webp$/, '')}`);
+      form.append('file', new Blob([readFileSync(join(ROOT, 'demo/img', file))], { type: 'image/webp' }), file);
+      const res = await fetch(`${WORKER}/dev-media/upload`, { method: 'POST', body: form }).catch(() => null);
+      if (!res?.ok) throw new Error(`No se pudo subir ${file} al Worker de desarrollo (${WORKER}). ¿Está en marcha \`npm run dev\`?`);
+      const { secure_url: url, public_id: publicId } = await res.json();
+      images.push({ sm: sized(url, 400), md: sized(url, 800), lg: url, publicId });
     }
     const { id, createdAt, ...rest } = p;
     batch.set(db.doc(`products/${id}`), { ...rest, images, createdAt: Timestamp.fromMillis(createdAt), updatedAt: now });
@@ -87,6 +86,10 @@ async function main() {
   let user;
   try { user = await auth.getUserByEmail(ADMIN.email); } catch { user = await auth.createUser(ADMIN); }
   await auth.setCustomUserClaims(user.uid, { admin: true });
+
+  // Índice público del catálogo (en producción lo mantienen el panel y la tarea horaria).
+  const { rebuildIndex } = await import('../server/src/catalog/catalog-index.js');
+  await rebuildIndex();
 
   console.log(`✔ ${categories.length} categorías, ${products.length} productos de Mivotunning y configuración de prueba creados.`);
   console.log(`✔ Admin de prueba: ${ADMIN.email} / ${ADMIN.password} (solo emulador)`);

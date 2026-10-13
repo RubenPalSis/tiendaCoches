@@ -1,7 +1,8 @@
 # ZetaWeb Ecommerce — Tienda de recambios
 
-Tienda online sin WordPress/Shopify: HTML + CSS + JavaScript, Firebase (Hosting, Authentication,
-Firestore, Storage, Cloud Functions), pagos con Stripe Checkout y envíos con GLS (gestión manual,
+Tienda online sin WordPress/Shopify y **sin planes de pago**: HTML + CSS + JavaScript servidos por
+Cloudflare Workers (web + servidor), Firebase en plan gratuito Spark (Authentication + Firestore),
+fotos en Cloudinary, emails con Brevo, pagos con Stripe Checkout y envíos con GLS (gestión manual,
 preparada para automatizar).
 
 - **Compradores:** sin registro. Catálogo con búsqueda instantánea, filtros, ficha de producto,
@@ -13,7 +14,7 @@ preparada para automatizar).
 
 | Documento | Para quién |
 |---|---|
-| [docs/puesta-en-produccion.md](docs/puesta-en-produccion.md) | Pasos exactos para publicar la tienda (Firebase, Stripe, email, dominio) |
+| [docs/puesta-en-produccion.md](docs/puesta-en-produccion.md) | Pasos exactos para publicar la tienda en planes gratuitos (Cloudflare, Firebase Spark, Cloudinary, Brevo, Stripe, dominio) |
 | [docs/manual-vendedor.md](docs/manual-vendedor.md) | Manual sencillo del panel para el cliente |
 | [docs/arquitectura.md](docs/arquitectura.md) | Arquitectura, modelo de datos, seguridad, costes y decisiones técnicas |
 | [docs/gls.md](docs/gls.md) | Envíos GLS: flujo manual actual y plan de integración futura |
@@ -41,19 +42,21 @@ Nombre, textos, redes y logo de la vista previa: `demo/settings.json`.
 Requisitos: Node 22+, Java 21+ (emuladores), `npm i -g firebase-tools`.
 
 ```bash
-npm install && (cd functions && npm install)
-cp functions/.env.example functions/.env.local   # emails admin para el emulador
-npm run dev          # emuladores: tienda en http://localhost:5000, UI en http://localhost:4000
+npm install
+npm run dev          # emuladores de Firebase + Worker local: tienda en http://localhost:5000, UI en http://localhost:4000
 npm run seed         # (otra terminal) catálogo de demo/ + ajustes de prueba + admin: admin@demo.test / demo1234
 ```
 
-El emulador no necesita cuenta de Firebase (proyecto `demo-tienda`). Sin claves de Stripe el checkout
-muestra «Los pagos todavía no están configurados» (esperado).
+No necesita ninguna cuenta: Firebase en emuladores (proyecto `demo-tienda`), el Worker con
+`wrangler dev --env dev` (configuración en `wrangler.toml` → `[env.dev]`) y las fotos en un almacén
+simulado en lugar de Cloudinary. Sin claves de Stripe el checkout muestra «Los pagos todavía no están
+configurados» (esperado). Para probar Stripe o Brevo en local, crea `.dev.vars` (git lo ignora) con
+`STRIPE_SECRET_KEY=…`, etc.
 
 ## Tests
 
 ```bash
-npm test                 # reglas + backend (arranca sus propios emuladores: para `npm run dev` antes)
+npm test                 # reglas + servidor (arranca sus propios emuladores: para `npm run dev` antes)
 npm run test:e2e         # navegador: comprador, panel y roles (requiere `npm run dev` + `npm run seed`)
 npm run test:responsive  # capturas 320–1920 px y detección de scroll horizontal
 ```
@@ -61,24 +64,27 @@ npm run test:responsive  # capturas 320–1920 px y detección de scroll horizon
 ## Estructura
 
 ```
-public/                 Firebase Hosting (sin paso de compilación)
+public/                 web estática servida por Cloudflare (sin paso de compilación); _headers = cabeceras
   css/tokens.css        identidad visual (colores, tipografías) ← cambiar por cliente
   js/shared/            código compartido navegador/servidor (precios, envíos, validación…)
   js/pages/             una entrada por página de la tienda
   js/admin/             panel de administración (SPA por hash)
   legal/                plantillas legales (revisar con un profesional)
-functions/src/          Cloud Functions: API, checkout, webhook Stripe, SEO/SSR, emails, panel
+server/src/             Cloudflare Worker: API, checkout, webhook Stripe, SEO/SSR, emails, panel, fotos
+  worker.js             punto de entrada y rutas
+  lib/firestore.js      Firestore por API REST (misma forma que firebase-admin)
+wrangler.toml           configuración de Cloudflare (variables públicas; secretos con `wrangler secret put`)
 firestore.rules         reglas de seguridad (probadas en tests/rules)
-storage.rules
-scripts/                copy-shared (predeploy), seed-demo (solo emulador), wallapop-import, build-static
+scripts/                copy-shared, seed-demo (solo emulador), wallapop-import, build-static
 demo/                   catálogo estático (vista previa en GitHub Pages y datos del emulador)
-tests/                  rules/, functions/, e2e/
+tests/                  rules/, server/, e2e/
 ```
 
 ## Reutilizar para otro cliente
 
-1. `public/css/tokens.css` (colores/tipografías), colores de emails en `functions/src/email/templates.js`,
+1. `public/css/tokens.css` (colores/tipografías), colores de emails en `server/src/email/templates.js`,
    `public/assets/img/logo-mark.svg` + `favicon.svg`, y logo/imagen de portada (Ajustes → Tienda: `logoUrl`, `heroImage`).
 2. Nombre, datos legales, contacto, envíos: desde el panel → Ajustes (se guardan en Firestore).
 3. Productos y categorías: desde el panel.
-4. Nuevo proyecto Firebase + cuenta Stripe del cliente (ver puesta en producción).
+4. Nuevo proyecto Firebase (Spark), Worker de Cloudflare (`name` en `wrangler.toml`), Cloudinary,
+   Brevo y la cuenta Stripe del cliente (ver puesta en producción).

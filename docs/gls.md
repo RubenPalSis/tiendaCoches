@@ -19,7 +19,7 @@ El peso de cada pieza sale del «tamaño del paquete» (2/5/15/30 kg) o de un pe
 
 ## Integración futura (preparada, NO implementada)
 
-`functions/src/shipping/providers/` define una interfaz común:
+`server/src/shipping/providers/` define una interfaz común:
 
 ```js
 createShipment(order) → { trackingNumber, trackingUrl?, labelPdfBase64? }
@@ -29,7 +29,7 @@ getStatus(trackingNumber) → { status, delivered }
 Hoy solo existe `manual.js`. Para automatizar:
 
 1. Crear `providers/gls.js` con esa interfaz, según la documentación oficial que facilite GLS al cliente.
-2. Guardar credenciales con `firebase functions:secrets:set GLS_…` (nunca en el código).
+2. Guardar credenciales con `npx wrangler secret put GLS_…` (nunca en el código).
 3. Añadir en el panel un botón «Crear envío en GLS» (recomendado frente a hacerlo automáticamente al
    pagar, para que el vendedor confirme bulto y peso) que llame a `createShipment`, guarde el
    tracking en el pedido y lo marque como enviado (misma lógica que hoy `setStatus('shipped')`).

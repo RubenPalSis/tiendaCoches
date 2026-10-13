@@ -6,7 +6,7 @@
 //
 //   Versión estática (GitHub Pages): node scripts/wallapop-import.js demo → demo/
 //
-//   2) Importar a Firestore + Storage (emulador por defecto):
+//   2) Importar a Firestore + fotos en Cloudinary (por defecto: emuladores + Worker de `npm run dev`):
 //        node scripts/wallapop-import.js import
 //      Producción: ver docs/puesta-en-produccion.md («Importar el catálogo de Wallapop»).
 //
@@ -150,23 +150,49 @@ async function fetchCatalog(userId) {
 
 // ---------- 2) Importación ----------
 const CONDITION = { new: 'new', as_good_as_new: 'used', good: 'used', fair: 'used', has_given_it_all: 'used', un_opened: 'new' };
-const SIZES = { sm: 400, md: 800, lg: 1600 };
 
-async function importCatalog({ force, bucketName }) {
+const sized = (url, width) => url.replace('/upload/', `/upload/c_limit,w_${width}/`);
+
+/** Sube una foto a Cloudinary (producción) o al almacén simulado del Worker de desarrollo. */
+async function uploader(emulator) {
+  const { CLOUDINARY_CLOUD_NAME: cloud, CLOUDINARY_API_KEY: key, CLOUDINARY_API_SECRET: secret, CLOUDINARY_FOLDER: folder = 'tienda' } = process.env;
+  if (emulator) {
+    const worker = process.env.BASE_URL || 'http://127.0.0.1:5000';
+    return async (publicId, buffer) => {
+      const form = new FormData();
+      form.append('public_id', `${folder}/${publicId}`);
+      form.append('file', new Blob([buffer], { type: 'image/webp' }), 'foto.webp');
+      const res = await fetch(`${worker}/dev-media/upload`, { method: 'POST', body: form }).catch(() => null);
+      if (!res?.ok) throw new Error(`No se pudo subir la foto al Worker de desarrollo (${worker}). ¿Está en marcha \`npm run dev\`?`);
+      return res.json();
+    };
+  }
+  if (!cloud || !key || !secret) throw new Error('Faltan CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET.');
+  const { cloudinarySignature } = await import('../server/src/media/media.js');
+  return async (publicId, buffer) => {
+    const params = { public_id: `${folder}/${publicId}`, timestamp: Math.floor(Date.now() / 1000), overwrite: 'true' };
+    const form = new FormData();
+    for (const [k, v] of Object.entries({ ...params, api_key: key, signature: await cloudinarySignature(params, secret) })) form.append(k, String(v));
+    form.append('file', new Blob([buffer], { type: 'image/webp' }), 'foto.webp');
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`, { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Cloudinary: ${data.error?.message ?? res.status}`);
+    return data;
+  };
+}
+
+async function importCatalog({ force }) {
   const { initializeApp } = await import('firebase-admin/app');
   const { getFirestore, Timestamp } = await import('firebase-admin/firestore');
-  const { getStorage } = await import('firebase-admin/storage');
   const sharp = (await import('sharp')).default;
 
   const emulator = !!process.env.FIRESTORE_EMULATOR_HOST;
   const projectId = process.env.GCLOUD_PROJECT || (emulator ? 'demo-tienda' : undefined);
   if (!projectId) throw new Error('Indica el proyecto: GCLOUD_PROJECT=mi-proyecto');
-  const bucket = bucketName || (emulator ? `${projectId}.appspot.com` : `${projectId}.firebasestorage.app`);
-  initializeApp({ projectId, storageBucket: bucket });
+  process.env.GCLOUD_PROJECT = projectId;
+  initializeApp({ projectId });
   const db = getFirestore();
-  const storage = getStorage().bucket();
-  const storageHost = emulator ? `http://${process.env.FIREBASE_STORAGE_EMULATOR_HOST}` : 'https://firebasestorage.googleapis.com';
-  const publicUrl = (path) => `${storageHost}/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media`;
+  const upload = await uploader(emulator);
 
   const all = JSON.parse(readFileSync(join(DATA, 'items.json'), 'utf8')).items;
   const items = all.filter(isAccessory);
@@ -195,17 +221,10 @@ async function importCatalog({ force, bucketName }) {
     const images = [];
     for (const [n, file] of it.images.slice(0, 8).entries()) {
       const source = readFileSync(join(DATA, 'images', file));
-      const base = `${slugify(name, 50)}-${n + 1}`;
-      const out = { paths: {} };
-      for (const [size, width] of Object.entries(SIZES)) {
-        const buffer = await sharp(source).rotate().resize({ width, height: width, fit: 'inside', withoutEnlargement: true })
-          .webp({ quality: 82 }).toBuffer();
-        const path = `products/${id}/${base}-${size}.webp`;
-        await storage.file(path).save(buffer, { contentType: 'image/webp', metadata: { cacheControl: 'public, max-age=31536000, immutable' } });
-        out[size] = publicUrl(path);
-        out.paths[size] = path;
-      }
-      images.push(out);
+      const buffer = await sharp(source).rotate().resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 82 }).toBuffer();
+      const { secure_url: url, public_id: publicId } = await upload(`products/${id}/${slugify(name, 50)}-${n + 1}`, buffer);
+      images.push({ sm: sized(url, 400), md: sized(url, 800), lg: url, publicId });
     }
 
     const now = Timestamp.now();
@@ -236,6 +255,14 @@ async function importCatalog({ force, bucketName }) {
     process.stdout.write(`\r${i + 1}/${items.length}`);
   }
   console.log(`\n✔ ${created} productos importados, ${skipped} ya existían (usa --force para reimportarlos).`);
+
+  // Índice público del catálogo. En producción el servidor usa la cuenta de servicio: se toma del
+  // mismo archivo que GOOGLE_APPLICATION_CREDENTIALS (si no, la tarea horaria lo reconstruirá).
+  if (!emulator && !process.env.FIREBASE_SERVICE_ACCOUNT && process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    process.env.FIREBASE_SERVICE_ACCOUNT = readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'utf8');
+  }
+  const { rebuildIndex } = await import('../server/src/catalog/catalog-index.js');
+  console.log(`✔ Índice del catálogo: ${(await rebuildIndex()).products} productos visibles.`);
 }
 
 // ---------- 3) Catálogo estático para GitHub Pages ----------
@@ -301,9 +328,6 @@ async function exportDemo() {
 const [cmd, arg] = process.argv.slice(2);
 if (cmd === 'fetch' && arg) await fetchCatalog(arg);
 else if (cmd === 'demo') await exportDemo();
-else if (cmd === 'import') {
-  const bucketArg = process.argv.find((a) => a.startsWith('--bucket='));
-  await importCatalog({ force: process.argv.includes('--force'), bucketName: bucketArg?.split('=')[1] });
-} else if (cmd) {
-  console.log('Uso:\n  node scripts/wallapop-import.js fetch <id-usuario>\n  node scripts/wallapop-import.js import [--force] [--bucket=nombre]\n  node scripts/wallapop-import.js demo   (catálogo estático para GitHub Pages)');
+else if (cmd === 'import') await importCatalog({ force: process.argv.includes('--force') }); else if (cmd) {
+  console.log('Uso:\n  node scripts/wallapop-import.js fetch <id-usuario>\n  node scripts/wallapop-import.js import [--force]\n  node scripts/wallapop-import.js demo   (catálogo estático para GitHub Pages)');
 }

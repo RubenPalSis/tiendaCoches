@@ -3,7 +3,7 @@ import { icon } from '../../shared/product-card.js';
 import { slugify, categoryPath } from '../../shared/slug.js';
 import { qs, on } from '../../core/dom.js';
 import { viewHead, toast, dialog, confirmDialog, errorBox } from '../ui.js';
-import { listCategories, listProducts, invalidateCategories } from '../data.js';
+import { listCategories, listProducts, invalidateCategories, syncCategoryIndex } from '../data.js';
 import { uploadImage } from '../uploads.js';
 
 function formBody(c = {}) {
@@ -88,6 +88,7 @@ export async function render(view, { firebase }) {
         createdAt: category?.createdAt ?? fs.serverTimestamp(),
       };
       await fs.setDoc(fs.doc(db, 'categories', id), payload);
+      await syncCategoryIndex();
       invalidateCategories();
       toast('Categoría guardada', { type: 'success' });
       draw(true);
@@ -107,6 +108,7 @@ export async function render(view, { firebase }) {
     if (!ok) return;
     try {
       await fs.deleteDoc(fs.doc(db, 'categories', c.id));
+      await syncCategoryIndex();
       invalidateCategories();
       toast('Categoría eliminada', { type: 'success' });
       draw(true);

@@ -1,10 +1,9 @@
-// Reglas de Firestore y Storage contra el emulador.
+// Reglas de Firestore contra el emulador (las fotos están en Cloudinary: ver tests/server/worker.test.js).
 // Uso: npm test (arranca emuladores) o con emuladores ya en marcha: node --test tests/rules/
 import { test, before, after, beforeEach } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getBytes } from 'firebase/storage';
 
 let env;
 const PRODUCT_ID = 'AbCdEfGhIjKlMnOpQrSt';
@@ -20,7 +19,6 @@ before(async () => {
   env = await initializeTestEnvironment({
     projectId: 'demo-tienda-rules',
     firestore: { rules: readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: 8080 },
-    storage: { rules: readFileSync('storage.rules', 'utf8'), host: '127.0.0.1', port: 9199 },
   });
 });
 after(() => env?.cleanup());
@@ -89,17 +87,4 @@ test('admin: validación de datos del producto', async () => {
 test('admin: no puede borrar un producto con unidades reservadas en un pago', async () => {
   await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'products', PRODUCT_ID), { reserved: 1 }));
   await assertFails(deleteDoc(doc(admin(), 'products', PRODUCT_ID)));
-});
-
-test('Storage: lectura pública de fotos, escritura solo admin y solo imágenes', async () => {
-  const img = new Uint8Array([137, 80, 78, 71]);
-  const adminSt = env.authenticatedContext('admin1', { admin: true }).storage();
-  const userSt = env.authenticatedContext('u1').storage();
-  const anonSt = env.unauthenticatedContext().storage();
-  await assertSucceeds(uploadBytes(ref(adminSt, 'products/p1/foto-sm.webp'), img, { contentType: 'image/webp' }));
-  await assertSucceeds(getBytes(ref(anonSt, 'products/p1/foto-sm.webp')));
-  await assertFails(uploadBytes(ref(anonSt, 'products/p1/hack.webp'), img, { contentType: 'image/webp' }));
-  await assertFails(uploadBytes(ref(userSt, 'products/p1/hack.webp'), img, { contentType: 'image/webp' }));
-  await assertFails(uploadBytes(ref(adminSt, 'products/p1/script.html'), img, { contentType: 'text/html' }));
-  await assertFails(uploadBytes(ref(adminSt, 'otros/archivo.webp'), img, { contentType: 'image/webp' }));
 });

@@ -1,9 +1,9 @@
 // Roles: un email de ADMIN_EMAILS obtiene acceso; cualquier otra cuenta se rechaza.
-// Requiere emuladores + functions/.env.local con ADMIN_EMAILS=admin@demo.test,otro-admin@demo.test
+// Requiere `npm run dev` (ADMIN_EMAILS de [env.dev] en wrangler.toml incluye otro-admin y sin-verificar).
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
-import { initializeApp } from '../../functions/node_modules/firebase-admin/lib/esm/app/index.js';
-import { getAuth } from '../../functions/node_modules/firebase-admin/lib/esm/auth/index.js';
+import { initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 
 process.env.FIREBASE_AUTH_EMULATOR_HOST ??= '127.0.0.1:9099';
 const BASE = process.env.BASE_URL || 'http://localhost:5000';

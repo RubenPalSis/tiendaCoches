@@ -110,8 +110,8 @@ await page.click('#product-form button[type="submit"]');
 await page.waitForSelector('[data-field="price"].has-error');
 step('validación de precio obligatorio');
 
-// Comprobar que aparece en la tienda pública (índice actualizado por el trigger)
-// El catálogo tiene caché de 30 s en memoria (y de minutos en la CDN real): reintentamos.
+// Comprobar que aparece en la tienda pública (el panel pide al servidor actualizar el índice al guardar).
+// El catálogo tiene caché de 30 s en memoria del Worker: reintentamos.
 let created;
 for (let i = 0; i < 25 && !created; i++) {
   const catalog = await (await page.request.get(`${BASE}/api/catalog?t=${Date.now()}`)).json();
@@ -120,7 +120,8 @@ for (let i = 0; i < 25 && !created; i++) {
 }
 assert.ok(created, 'la pieza nueva aparece en el catálogo público');
 assert.equal(created.price, 3990);
-assert.ok(created.img.includes('-sm.'), 'la foto pequeña está en el índice');
+assert.ok(created.img.includes('/upload/c_limit,w_400/'), 'la foto pequeña (400 px) está en el índice');
+assert.equal((await page.request.get(new URL(created.img, BASE).href)).status(), 200, 'la foto se descarga');
 step('la pieza aparece en /api/catalog con precio y foto');
 
 // Borrado

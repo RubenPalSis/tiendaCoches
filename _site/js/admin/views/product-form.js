@@ -7,8 +7,8 @@ import { productSlug, productPath } from '../../shared/slug.js';
 import { CONDITIONS, SIZE_PRESETS, LIMITS } from '../../shared/constants.js';
 import { qs, qsa, on, setLoading } from '../../core/dom.js';
 import { viewHead, toast, confirmDialog, errorBox } from '../ui.js';
-import { getProduct, listCategories, updateProductCache, removeFromProductCache } from '../data.js';
-import { uploadImage, deleteImage } from '../uploads.js';
+import { getProduct, listCategories, updateProductCache, removeFromProductCache, syncProductIndex } from '../data.js';
+import { uploadImage, deleteImages } from '../uploads.js';
 
 const sizeFor = (weight) => SIZE_PRESETS.find((s) => s.weight === weight)?.id ?? (weight ? 'custom' : 'S');
 
@@ -249,7 +249,7 @@ export async function render(view, { params, firebase }) {
   });
   on(photos, 'click', '[data-remove-photo]', (e, b) => {
     const [img] = images.splice(Number(b.dataset.removePhoto), 1);
-    if (sessionUploads.has(img)) deleteImage(img);
+    if (sessionUploads.has(img)) deleteImages([img]);
     else removedOnSave.push(img);
     drawPhotos();
   });
@@ -271,7 +271,7 @@ export async function render(view, { params, firebase }) {
     const payload = {
       ...data,
       slug: productSlug(data.name, id),
-      images: images.map(({ sm, md, lg, paths }) => ({ sm, md, lg, paths })),
+      images: images.map(({ sm, md, lg, publicId }) => ({ sm, md, lg, ...(publicId ? { publicId } : {}) })),
       updatedAt: fs.serverTimestamp(),
     };
     try {
@@ -289,7 +289,8 @@ export async function render(view, { params, firebase }) {
           tx.update(ref, update);
         });
       }
-      await Promise.all(removedOnSave.map(deleteImage));
+      await syncProductIndex(id);
+      await deleteImages(removedOnSave);
       updateProductCache({ id, ...payload, updatedAt: new Date(), ...(isNew ? { reserved: 0, soldCount: 0, createdAt: { toMillis: () => Date.now() } } : {}) });
       toast(isNew ? 'Pieza publicada' : 'Cambios guardados', { type: 'success' });
       location.hash = '#/productos';
@@ -307,7 +308,8 @@ export async function render(view, { params, firebase }) {
     if (!(await confirmDialog('Eliminar pieza', msg, { confirm: 'Eliminar', danger: true }))) return;
     try {
       await fs.deleteDoc(fs.doc(db, 'products', id));
-      await Promise.all((original.images ?? []).map(deleteImage));
+      await syncProductIndex(id);
+      await deleteImages(original.images ?? []);
       removeFromProductCache(id);
       toast('Pieza eliminada', { type: 'success' });
       location.hash = '#/productos';
