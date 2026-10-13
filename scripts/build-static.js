@@ -81,7 +81,8 @@ write('admin/index.html', `<!doctype html><html lang="es"><head><meta charset="u
 
 // ---------- Post-proceso: modo estático + prefijo de GitHub Pages (/repositorio) ----------
 const ROOTS = 'css|js|assets|demo|catalogo|carrito|checkout|pedido|contacto|legal|producto|categoria|admin|api|sitemap\\.xml';
-const PREFIX = new RegExp(`(["'\`(])\\/(${ROOTS})(?=[/"'\`?#)\\s.]|$)`, 'g');
+// ", " cubre las rutas segunda y siguientes de un srcset
+const PREFIX = new RegExp(`(["'\`(]|, )\\/(${ROOTS})(?=[/"'\`?#)\\s.]|$)`, 'g');
 
 function walk(dir) {
   return readdirSync(dir).flatMap((f) => {

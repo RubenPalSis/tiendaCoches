@@ -228,13 +228,11 @@ p { margin: 0 0 1em; }
 body.no-scroll { overflow: hidden; }
 
 /* ---------- Hero ---------- */
-.hero { position: relative; overflow: hidden; background: #010206 url('/tiendaCoches/assets/img/brand/hero-bg.webp') right center / cover no-repeat; color: #fff; }
-/* Velo oscuro para que el texto se lea sobre las líneas de neón */
-.hero::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgb(1 2 6 / .78), rgb(1 2 6 / .55)); }
-@media (min-width: 960px) {
-  .hero { background-size: auto 160%; background-position: right -40px center; }
-  .hero::before { background: linear-gradient(90deg, #010206 30%, rgb(1 2 6 / .6) 55%, rgb(1 2 6 / 0) 80%); }
-}
+.hero { position: relative; overflow: hidden; background: var(--c-ink); color: #fff; }
+.hero::before { content: ''; position: absolute; inset: 0; background:
+  radial-gradient(ellipse 50% 70% at 10% 0%, rgb(0 123 249 / .28), transparent 60%),
+  radial-gradient(ellipse 50% 80% at 95% 30%, rgb(245 18 42 / .25), transparent 60%),
+  repeating-linear-gradient(135deg, rgb(255 255 255 / .025) 0 2px, transparent 2px 14px); }
 .hero__inner { position: relative; display: grid; gap: 28px; padding-block: 40px 48px; }
 .hero__search { max-width: 620px; }
 .hero__search .search__input { min-height: 56px; font-size: 17px; padding-right: 64px; }
@@ -636,3 +634,12 @@ p > .icon, .muted > .icon { display: inline-block; vertical-align: -3px; }
 }
 .hero__stats--row { margin-top: 28px; }
 @media (min-width: 960px) { .hero__stats--row { grid-template-columns: repeat(3, 1fr); } }
+
+/* ---------- Fondo de neón en las zonas de productos (portada, catálogo y categorías) ---------- */
+/* Capa fija en un pseudo-elemento: funciona también en iOS (que ignora background-attachment: fixed).
+   Cabecera, portada, pie y bandas blancas tienen fondo propio y la tapan. */
+body:is([data-page='home'], [data-page='catalog']) { isolation: isolate; background: #010206; }
+body:is([data-page='home'], [data-page='catalog'])::before { content: ''; position: fixed; inset: 0; z-index: -1; background: url('/tiendaCoches/assets/img/brand/hero-bg.webp') center / cover no-repeat; }
+:is([data-page='home'], [data-page='catalog']) main :is(.section:not(.info-band) .section__title, .page-head__title, .breadcrumbs [aria-current], .toolbar__count strong, .empty-state :is(h1, h2)) { color: #fff; }
+:is([data-page='home'], [data-page='catalog']) main :is(.breadcrumbs ol, .breadcrumbs a, .page-head__lead, .toolbar__count, .load-more__info, .empty) { color: var(--c-on-dark-muted); }
+:is([data-page='home'], [data-page='catalog']) main :is(.section:not(.info-band) .section__link, .breadcrumbs a:hover) { color: var(--c-accent-bright); }
