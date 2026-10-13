@@ -63,12 +63,14 @@ function renderShippingInfo({ shipping, store }) {
 
 /** Textos e imagen de portada configurables (settings/store); si no hay, se mantienen los del HTML. */
 function renderHero({ store }) {
-  if (store.heroKicker) qs('#hero-kicker').textContent = store.heroKicker;
   if (store.heroTitle) {
     qs('#hero-title').innerHTML = html`${store.heroTitle}${store.heroHighlight ? raw(html` <em>${store.heroHighlight}</em>`) : ''}`;
   }
-  if (store.heroLead) qs('#hero-lead').textContent = store.heroLead;
-  if (store.heroImage) qs('#hero-image').src = store.heroImage;
+  if (store.heroImage) {
+    const img = qs('#hero-image');
+    img.removeAttribute('srcset');
+    img.src = store.heroImage;
+  }
 }
 
 const { catalog, error } = await initApp();

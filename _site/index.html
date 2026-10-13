@@ -26,9 +26,8 @@
   <section class="hero">
     <div class="container hero__inner">
       <div>
-        <p class="hero__kicker" id="hero-kicker">Tu coche, tu estilo, nuestra pasión</p>
-        <h1 class="hero__title" id="hero-title">Accesorios tuning <em>para tu coche</em></h1>
-        <p class="hero__lead" id="hero-lead">Lips, spoilers, alerones, difusores, taloneras y parrillas para BMW, Audi, Seat, Volkswagen y más. Busca por tu modelo de coche.</p>
+        <h1 class="sr-only" id="hero-title">Accesorios tuning <em>para tu coche</em></h1>
+        <p class="hero__search-title" aria-hidden="true">Encuentra el accesorio <em>para tu coche</em></p>
         <form class="search hero__search" role="search" action="/tiendaCoches/catalogo" data-search>
           <label class="sr-only" for="hero-search">Buscar accesorios</label>
           <input class="search__input" id="hero-search" name="q" type="search" autocomplete="off" enterkeyhint="search"
@@ -43,7 +42,10 @@
           <div class="hero__stat"><svg class="icon" aria-hidden="true"><use href="/tiendaCoches/assets/icons.svg#users"></use></svg><strong>Trato directo</strong><span>Te asesoramos antes de comprar</span></div>
       </div>
       </div>
-      <div class="hero__visual"><img id="hero-image" src="/tiendaCoches/assets/img/brand/hero.webp" alt="" width="420" height="420" fetchpriority="high"></div>
+      <div class="hero__visual"><img id="hero-image" src="/tiendaCoches/assets/img/brand/hero-poster-900.webp"
+        srcset="/tiendaCoches/assets/img/brand/hero-poster-600.webp 600w, /assets/img/brand/hero-poster-900.webp 900w"
+        sizes="(min-width: 960px) 440px, 100vw" alt="Mivotunning Car Custom Garage: tu coche, tu estilo, nuestra pasión"
+        width="900" height="1170" fetchpriority="high"></div>
     </div>
   </section>
 
