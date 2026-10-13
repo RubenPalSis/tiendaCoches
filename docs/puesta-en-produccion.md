@@ -71,8 +71,8 @@ firebase use --add                   # elige el proyecto y escribe «default» c
 npm run deploy:rules                 # reglas de seguridad e índices (funciona en el plan Spark)
 ```
 
-Firestore → pestaña **TTL** → **Crear política**: grupo `orders`, campo `deleteAt`; y otra con grupo
-`stripeEvents`, campo `deleteAt` (borran solos los pedidos nunca pagados y los eventos antiguos).
+*(No hace falta crear políticas TTL: exigen facturación. Los pedidos nunca pagados y los eventos
+antiguos los borra la tarea horaria del Worker.)*
 
 ## 3. 👤 Cloudflare: conectar la terminal y configurar
 

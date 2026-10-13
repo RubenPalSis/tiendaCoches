@@ -266,3 +266,21 @@ export async function releaseStaleReservations(graceMinutes = 15) {
   for (const doc of snap.docs) if (await releaseReservation(doc.id, { note: 'Reserva caducada' })) released += 1;
   return released;
 }
+
+/**
+ * Borra pedidos nunca pagados y eventos de Stripe antiguos cuyo `deleteAt` ya pasó.
+ * (Las políticas TTL de Firestore exigen facturación; en el plan gratuito lo hace la tarea horaria.)
+ */
+export async function purgeExpired(limit = 200) {
+  const now = Timestamp.now();
+  let deleted = 0;
+  for (const collection of ['orders', 'stripeEvents']) {
+    const snap = await db.collection(collection).where('deleteAt', '<', now).limit(limit).get();
+    if (snap.empty) continue;
+    const batch = db.batch();
+    snap.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+    deleted += snap.size;
+  }
+  return deleted;
+}

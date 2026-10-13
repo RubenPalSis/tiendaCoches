@@ -25,9 +25,10 @@ enabled = true
 # (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, BREVO_API_KEY, CLOUDINARY_API_SECRET, FIREBASE_SERVICE_ACCOUNT).
 [vars]
 SITE_URL = ""                 # p. ej. "https://www.mitienda.es" (vacío = dominio de la petición)
-ADMIN_EMAILS = ""             # emails del panel separados por comas
-FIREBASE_PROJECT_ID = ""
-FIREBASE_WEB_CONFIG = ""      # JSON de Firebase → Configuración del proyecto → Tus apps → Web (es público)
+ADMIN_EMAILS = "mivotunning@gmail.com,ruben.palacio@zierzoware.com" # emails del panel separados por comas
+FIREBASE_PROJECT_ID = "mivotunning-f973f"
+# Configuración web de Firebase (es pública): Configuración del proyecto → Tus apps → Web
+FIREBASE_WEB_CONFIG = '{"apiKey":"AIzaSyDBb8lXbRT44PZTtQqa5VWrhyhRHXCuiww","authDomain":"mivotunning-f973f.firebaseapp.com","projectId":"mivotunning-f973f","appId":"1:1021948872243:web:cbe8f8c04ededaf88c0546","messagingSenderId":"1021948872243"}'
 CLOUDINARY_CLOUD_NAME = ""
 CLOUDINARY_API_KEY = ""
 CLOUDINARY_FOLDER = "tienda"

@@ -343,3 +343,18 @@ test('origen de los enlaces: no se puede falsear con X-Forwarded-Host', async ()
   const { requestOrigin } = await import('../../server/src/lib/http.js');
   assert.equal(requestOrigin({ headers: { 'x-forwarded-host': 'evil.tld' } }), 'https://tienda.test');
 });
+
+test('limpieza horaria: borra pedidos sin pagar y eventos caducados (sustituye al TTL), nunca los pagados', async () => {
+  const { purgeExpired } = await import('../../server/src/orders/order-service.js');
+  const past = Timestamp.fromMillis(Date.now() - 60_000);
+  const future = Timestamp.fromMillis(Date.now() + 86_400_000);
+  await db.doc('orders/VIEJO000000000000001').set({ paymentStatus: 'expired', deleteAt: past });
+  await db.doc('orders/NUEVO000000000000001').set({ paymentStatus: 'pending', deleteAt: future });
+  await db.doc('orders/PAGADO00000000000001').set({ paymentStatus: 'paid' });
+  await db.doc('stripeEvents/evt_viejo').set({ deleteAt: past });
+  assert.equal(await purgeExpired(), 2);
+  assert.equal((await db.doc('orders/VIEJO000000000000001').get()).exists, false);
+  assert.equal((await db.doc('orders/NUEVO000000000000001').get()).exists, true);
+  assert.equal((await db.doc('orders/PAGADO00000000000001').get()).exists, true);
+  assert.equal((await db.doc('stripeEvents/evt_viejo').get()).exists, false);
+});
