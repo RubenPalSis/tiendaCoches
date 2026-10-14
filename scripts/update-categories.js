@@ -31,7 +31,11 @@ console.log(`Actualizando categorías en ${JSON.parse(key).project_id}…`);
 
 for (const c of categories) {
   const ref = db.doc(`categories/${c.id}`);
-  if ((await ref.get()).exists) continue;
+  if ((await ref.get()).exists) {
+    // Mismo id que una categoría antigua (p. ej. «Difusores y paragolpes»): se renombra.
+    await ref.update({ name: c.name, description: c.description, order: c.order, updatedAt: now });
+    continue;
+  }
   await ref.set({ name: c.name, slug: c.slug, description: c.description, order: c.order, image: '', active: true, createdAt: now, updatedAt: now });
   console.log(`+ Categoría «${c.name}»`);
 }

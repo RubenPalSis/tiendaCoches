@@ -2,6 +2,7 @@ import { logger } from '../lib/log.js';
 import { releaseStaleReservations, purgeExpired } from './order-service.js';
 import { revokeRemovedAdmins } from '../admin/claims.js';
 import { rebuildIndex } from '../catalog/catalog-index.js';
+import { fixCategories } from '../catalog/fix-categories.js';
 
 // Tarea horaria (Cron Trigger de Cloudflare, incluido en el plan gratuito; ver wrangler.toml):
 //  - libera reservas caducadas cuyo webhook no llegó,
@@ -15,6 +16,7 @@ export async function runScheduled() {
     released: releaseStaleReservations,
     purged: purgeExpired,
     revoked: revokeRemovedAdmins,
+    categories: fixCategories, // puntual; antes de reconstruir el índice
     index: rebuildIndex,
   };
   for (const [name, task] of Object.entries(tasks)) {
