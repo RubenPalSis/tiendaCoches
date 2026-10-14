@@ -25,3 +25,7 @@ tests/e2e/screenshots/
 
 # Copia de demo/img que se publica con la web (la genera scripts/copy-shared.js)
 public/media/
+
+# Ajustes personales de Claude Code
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
