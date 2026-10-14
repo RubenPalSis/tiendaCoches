@@ -1,5 +1,7 @@
 # ZetaWeb Ecommerce — Tienda de recambios
-
+4242 4242 4242 4242: el pago sale bien.
+4000 0000 0000 0002: el pago se rechaza.
+4000 0025 0000 3155: pide confirmación del banco.
 Tienda online sin WordPress/Shopify y **sin planes de pago**: HTML + CSS + JavaScript servidos por
 Cloudflare Workers (web + servidor), Firebase en plan gratuito Spark (Authentication + Firestore),
 fotos en Cloudinary, emails con Brevo, pagos con Stripe Checkout y envíos con GLS (gestión manual,
