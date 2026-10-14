@@ -63,7 +63,10 @@ export async function createCheckout(req) {
       {
         mode: 'payment',
         locale: 'es',
-        payment_method_types: ['card'], // incluye Apple Pay y Google Pay; evita métodos de pago diferido
+        // Métodos de pago: los que estén activos en Stripe → Configuración → Métodos de pago (Stripe ya
+        // no admite payment_method_types). Dejar tarjetas, Apple Pay y Google Pay; los diferidos llegan
+        // por checkout.session.async_payment_*.
+        adaptive_pricing: { enabled: false }, // siempre en euros (sin conversión de divisa de Stripe)
         customer_email: order.customer.email,
         client_reference_id: id,
         // El token solo viaja en la sesión de Stripe (no se guarda en claro) para el enlace del email.
