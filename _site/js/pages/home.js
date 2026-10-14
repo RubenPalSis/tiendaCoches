@@ -1,6 +1,7 @@
 import { html, raw } from '../shared/escape.js';
 import { formatPrice } from '../shared/money.js';
-import { categoryPath } from '../shared/slug.js';
+import { categoryPath, brandPath } from '../shared/slug.js';
+import { CAR_BRANDS } from '../shared/constants.js';
 import { renderProductCard, icon } from '../shared/product-card.js';
 import { freeShippingThreshold } from '../shared/shipping.js';
 import { qs } from '../core/dom.js';
@@ -10,6 +11,7 @@ import { categoryIcon, whatsappUrl } from '../components/store-links.js';
 
 const PER_SECTION = 8;
 // Filas completas: 8, 4 o lo que haya si son menos de 4.
+const countLabel = (n = 0) => `${n} ${n === 1 ? 'producto' : 'productos'}`;
 const fit = (list) => list.slice(0, list.length >= PER_SECTION ? PER_SECTION : list.length >= 4 ? 4 : list.length);
 
 function fillGrid(id, products, sectionId) {
@@ -29,16 +31,24 @@ function renderCategories({ categories, products }) {
   for (const p of products) if (p.stock > 0) counts.set(p.categoryId, (counts.get(p.categoryId) ?? 0) + 1);
   qs('#categories').innerHTML = categories.map((c) => c.image
     ? html`<a class="cat-tile cat-tile--image" href="${categoryPath(c)}"><img src="${c.image}" alt="" loading="lazy" width="300" height="200">
-        <span class="cat-tile__name">${c.name}</span><span class="cat-tile__count">${counts.get(c.id) ?? 0} productos</span></a>`
+        <span class="cat-tile__name">${c.name}</span><span class="cat-tile__count">${countLabel(counts.get(c.id))}</span></a>`
     : html`<a class="cat-tile" href="${categoryPath(c)}">${icon(categoryIcon(c.name), 'icon cat-tile__icon')}
-        <span class="cat-tile__name">${c.name}</span><span class="cat-tile__count">${counts.get(c.id) ?? 0} productos</span></a>`).join('');
+        <span class="cat-tile__name">${c.name}</span><span class="cat-tile__count">${countLabel(counts.get(c.id))}</span></a>`).join('');
   qs('#categories-section').hidden = false;
+}
+
+function renderBrands({ products }) {
+  const counts = new Map();
+  for (const p of products) if (p.stock > 0) counts.set(p.brand, (counts.get(p.brand) ?? 0) + 1);
+  qs('#brands').innerHTML = CAR_BRANDS.map((b) => html`<a class="cat-tile" href="${brandPath(b)}">${icon('car', 'icon cat-tile__icon')}
+    <span class="cat-tile__name">${b}</span><span class="cat-tile__count">${countLabel(counts.get(b))}</span></a>`).join('');
+  qs('#brands-section').hidden = false;
 }
 
 function renderHints({ products, categories }) {
   const brands = [...new Set(products.filter((p) => p.stock > 0 && p.brand).map((p) => p.brand))].slice(0, 4);
   const hints = [
-    ...brands.map((b) => ({ label: b, href: `/tiendaCoches/catalogo?q=${encodeURIComponent(b)}` })),
+    ...brands.map((b) => ({ label: b, href: brandPath(b) })),
     ...categories.slice(0, 6 - brands.length).map((c) => ({ label: c.name, href: categoryPath(c) })),
   ];
   if (!hints.length) return;
@@ -85,6 +95,7 @@ if (!error) {
   const shown = new Set(featuredList.map((p) => p.id));
 
   renderCategories(catalog);
+  renderBrands(catalog);
   renderHints(catalog);
   renderShippingInfo(catalog);
   fillGrid('featured', featuredList, 'featured-section');

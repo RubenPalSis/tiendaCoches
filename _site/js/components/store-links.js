@@ -11,6 +11,11 @@ export function whatsappUrl(store, text = '') {
 export const telUrl = (phone) => `tel:${String(phone ?? '').replace(/[^\d+]/g, '')}`;
 
 const CATEGORY_ICONS = [
+  [/\blip|aler[oó]n|spoiler|difusor/, 'wind'],
+  [/parrilla|calandra|rejilla/, 'grid'],
+  [/escape/, 'zap'],
+  [/universal/, 'tag'],
+  [/bodykit|body kit|talonera|añadido/, 'car'],
   [/motor|culata|turbo|inyecc|embrag|transmis|caja de cambio/, 'cog'],
   [/fren|disco|pastill/, 'disc'],
   [/luz|luces|faro|piloto|ilumin|optica|óptica/, 'bulb'],

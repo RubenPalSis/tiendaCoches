@@ -166,6 +166,17 @@ rm service-account.json
 Sube las fotos a Cloudinary, crea los productos y reconstruye el índice de la tienda. Revisa después
 en el panel el **stock** de cada pieza (Wallapop no lo indica; se importan con 1 unidad).
 
+### Pasar a las categorías y marcas nuevas (octubre 2026)
+
+Si el catálogo se importó con las categorías antiguas (Lips y spoilers, Accesorios exterior…), este
+script crea las 9 categorías nuevas, recoloca los productos, unifica las marcas y borra las antiguas.
+Solo cambia categoría y marca; se puede repetir sin riesgo:
+
+```bash
+node scripts/update-categories.js service-account.json
+rm service-account.json
+```
+
 ## 6. 👤 Stripe
 
 La cuenta debe estar **a nombre del vendedor** (cobra él) y te invita como miembro del equipo

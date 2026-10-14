@@ -12,6 +12,10 @@ export const SIZE_PRESETS = [
   { id: 'XL', label: 'Muy grande (15–30 kg)', weight: 30000 },
 ];
 
+// Marcas que trabaja la tienda: apartado «Marcas» de la portada y del menú, y sugerencias del panel.
+// «Universal» = piezas que valen para cualquier coche.
+export const CAR_BRANDS = ['Audi', 'BMW', 'Seat', 'Volkswagen', 'Mercedes', 'Universal'];
+
 export const LIMITS = {
   maxQtyPerLine: 10,
   maxLines: 20,

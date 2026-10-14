@@ -170,6 +170,11 @@ function updateHeading(count) {
     title.textContent = cat.name;
     lead.textContent = cat.description || '';
     document.title = `${cat.name} | ${catalog.store.name}`;
+  } else if (state.brands.length === 1) { // enlaces del apartado «Marcas»
+    const [brand] = state.brands;
+    title.textContent = brand === 'Universal' ? 'Accesorios universales' : `Accesorios para ${brand}`;
+    lead.textContent = '';
+    document.title = `${brand} | ${catalog.store.name}`;
   } else {
     title.textContent = state.offers ? 'Ofertas' : 'Catálogo';
     document.title = `${state.offers ? 'Ofertas' : 'Catálogo'} | ${catalog.store.name}`;

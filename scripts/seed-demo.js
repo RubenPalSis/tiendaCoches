@@ -62,7 +62,7 @@ async function main() {
 
   batch.set(db.doc('settings/store'), {
     ...settings.store,
-    ownerName: 'Nombre Apellido (DEMO)', taxId: '00000000T', address: 'Calle Ejemplo 1, 09400 Aranda de Duero (Burgos)',
+    ownerName: 'Nombre Apellido (DEMO)', taxId: '00000000T', address: 'Calle Ejemplo 1, Fresnillo de las Dueñas (Burgos)',
     email: 'tienda@demo.test', phone: '600 000 000', whatsapp: '600000000', usedWarranty: '1 año',
     notificationEmail: 'tienda@demo.test', emailFrom: 'tienda@demo.test',
   });

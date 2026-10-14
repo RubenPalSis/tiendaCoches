@@ -4,7 +4,7 @@ import { html, raw } from '../../shared/escape.js';
 import { toCents, centsToInput } from '../../shared/money.js';
 import { icon } from '../../shared/product-card.js';
 import { productSlug, productPath } from '../../shared/slug.js';
-import { CONDITIONS, SIZE_PRESETS, LIMITS } from '../../shared/constants.js';
+import { CONDITIONS, SIZE_PRESETS, LIMITS, CAR_BRANDS } from '../../shared/constants.js';
 import { qs, qsa, on, setLoading } from '../../core/dom.js';
 import { viewHead, toast, confirmDialog, errorBox } from '../ui.js';
 import { getProduct, listCategories, updateProductCache, removeFromProductCache, syncProductIndex } from '../data.js';
@@ -82,7 +82,8 @@ function formMarkup(p, categories, isNew) {
                 <div class="field"><label class="field__label" for="f-reference">Referencia <span class="opt">(opcional)</span></label>
                   <input class="input mono" id="f-reference" name="reference" maxlength="80" value="${p.reference ?? ''}" placeholder="Nº de pieza / OEM"></div>
                 <div class="field"><label class="field__label" for="f-brand">Marca <span class="opt">(opcional)</span></label>
-                  <input class="input" id="f-brand" name="brand" maxlength="80" value="${p.brand ?? ''}" placeholder="Seat, Bosch, Valeo…"></div>
+                  <input class="input" id="f-brand" name="brand" maxlength="80" value="${p.brand ?? ''}" list="brand-options" placeholder="BMW, Audi, Universal…">
+                  <datalist id="brand-options">${CAR_BRANDS.map((b) => raw(html`<option value="${b}">`))}</datalist></div>
                 <div class="field"><label class="field__label" for="f-model">Modelo <span class="opt">(opcional)</span></label>
                   <input class="input" id="f-model" name="model" maxlength="120" value="${p.model ?? ''}" placeholder="Ibiza 6J"></div>
               </div>

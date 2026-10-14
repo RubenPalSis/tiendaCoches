@@ -31,3 +31,8 @@ export function productIdFromSlug(slug) {
   const candidate = String(slug ?? '').slice(-20);
   return FIRESTORE_ID.test(candidate) ? candidate : null;
 }
+
+/** Catálogo filtrado por una marca (apartado «Marcas»). */
+export function brandPath(brand) {
+  return `/catalogo?marca=${encodeURIComponent(brand)}`;
+}

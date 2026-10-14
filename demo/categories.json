@@ -1,46 +1,82 @@
 [
  {
-  "id": "lips-spoilers",
-  "name": "Lips y spoilers",
+  "id": "lip",
+  "name": "Lip",
   "order": 1,
-  "description": "Lips, labios y spoilers delanteros, alerones y spoilers traseros para dar un aspecto deportivo a tu coche.",
-  "slug": "lips-spoilers",
+  "description": "Lips, labios y splitters delanteros para dar un aspecto deportivo a tu coche.",
+  "slug": "lip",
+  "image": "",
+  "active": true
+ },
+ {
+  "id": "alerones",
+  "name": "Alerones",
+  "order": 2,
+  "description": "Alerones y spoilers traseros de maletero y de luna.",
+  "slug": "alerones",
+  "image": "",
+  "active": true
+ },
+ {
+  "id": "bodykit-paragolpes",
+  "name": "Bodykit y paragolpes",
+  "order": 3,
+  "description": "Paragolpes deportivos y body kits completos.",
+  "slug": "bodykit-paragolpes",
   "image": "",
   "active": true
  },
  {
   "id": "difusores",
-  "name": "Difusores y paragolpes",
-  "order": 2,
-  "description": "Difusores traseros y paragolpes deportivos.",
+  "name": "Difusores",
+  "order": 4,
+  "description": "Difusores traseros deportivos.",
   "slug": "difusores",
   "image": "",
   "active": true
  },
  {
   "id": "taloneras",
-  "name": "Taloneras y body kits",
-  "order": 3,
-  "description": "Taloneras, faldones laterales y body kits completos.",
+  "name": "Añadidos y taloneras",
+  "order": 5,
+  "description": "Añadidos, taloneras y faldones laterales.",
   "slug": "taloneras",
   "image": "",
   "active": true
  },
  {
-  "id": "parrillas",
-  "name": "Parrillas y calandras",
-  "order": 4,
-  "description": "Parrillas, calandras y rejillas deportivas.",
-  "slug": "parrillas",
+  "id": "universales",
+  "name": "Universales",
+  "order": 6,
+  "description": "Accesorios universales que sirven para cualquier coche.",
+  "slug": "universales",
   "image": "",
   "active": true
  },
  {
-  "id": "accesorios-exterior",
-  "name": "Accesorios exterior",
-  "order": 6,
-  "description": "Carcasas de retrovisor, aletas y otros accesorios exteriores.",
-  "slug": "accesorios-exterior",
+  "id": "colas-escape",
+  "name": "Colas de escape",
+  "order": 7,
+  "description": "Colas, puntas y embellecedores de escape.",
+  "slug": "colas-escape",
+  "image": "",
+  "active": true
+ },
+ {
+  "id": "tapas-espejos",
+  "name": "Tapas de espejos",
+  "order": 8,
+  "description": "Tapas y carcasas de retrovisor.",
+  "slug": "tapas-espejos",
+  "image": "",
+  "active": true
+ },
+ {
+  "id": "parrillas-calandras",
+  "name": "Parrillas y calandras",
+  "order": 9,
+  "description": "Parrillas, calandras, riñones y rejillas deportivas.",
+  "slug": "parrillas-calandras",
   "image": "",
   "active": true
  }

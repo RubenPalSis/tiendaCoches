@@ -14,7 +14,7 @@
 // sobrescriben (se respetan los cambios hechos en el panel) salvo con --force.
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { productSlug, slugify } from '../public/js/shared/slug.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -24,18 +24,25 @@ const HEADERS = { Accept: 'application/json', 'X-DeviceOS': '0', 'Accept-Languag
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---------- Categorías y extracción de datos ----------
+// Categorías que pidió el cliente, en su orden. Se asigna la primera que encaje con el título
+// (por eso «Lip + taloneras» va a Lip); lo que no encaja en ninguna va a Universales.
 export const CATEGORIES = [
-  { id: 'lips-spoilers', name: 'Lips y spoilers', order: 1, description: 'Lips, labios y spoilers delanteros, alerones y spoilers traseros para dar un aspecto deportivo a tu coche.', match: /\b(lip|labio|splitter|spoiler|aler[oó]n|fald[oó]n delantero)/i },
-  { id: 'difusores', name: 'Difusores y paragolpes', order: 2, description: 'Difusores traseros y paragolpes deportivos.', match: /\b(difusor|paragolpes|parachoques)/i },
-  { id: 'taloneras', name: 'Taloneras y body kits', order: 3, description: 'Taloneras, faldones laterales y body kits completos.', match: /\b(talonera|fald[oó]n|faldones|body ?kit|kit (de )?carrocer)/i },
-  { id: 'parrillas', name: 'Parrillas y calandras', order: 4, description: 'Parrillas, calandras y rejillas deportivas.', match: /\b(parrilla|calandra|rejilla|ri[ñn]ones)/i },
-  { id: 'escapes', name: 'Embellecedores de escape', order: 5, description: 'Colas y embellecedores de escape.', match: /\b(escape|cola|colas|embellecedor|puntera|tubo)/i },
-  { id: 'accesorios-exterior', name: 'Accesorios exterior', order: 6, description: 'Carcasas de retrovisor, aletas y otros accesorios exteriores.', match: /.*/ },
+  { id: 'lip', name: 'Lip', order: 1, description: 'Lips, labios y splitters delanteros para dar un aspecto deportivo a tu coche.', match: /\b(lip|labio|splitter)/i },
+  { id: 'alerones', name: 'Alerones', order: 2, description: 'Alerones y spoilers traseros de maletero y de luna.', match: /\b(aler[oó]n|spoiler)/i },
+  { id: 'difusores', name: 'Difusores', order: 4, description: 'Difusores traseros deportivos.', match: /\bdifusor/i },
+  { id: 'parrillas-calandras', name: 'Parrillas y calandras', order: 9, description: 'Parrillas, calandras, riñones y rejillas deportivas.', match: /\b(parrilla|calandra|rejilla|ri[ñn]ones)/i },
+  { id: 'tapas-espejos', name: 'Tapas de espejos', order: 8, description: 'Tapas y carcasas de retrovisor.', match: /\b(espejo|retrovisor)/i },
+  { id: 'colas-escape', name: 'Colas de escape', order: 7, description: 'Colas, puntas y embellecedores de escape.', match: /\b(escape|colas?\b|puntera)/i },
+  { id: 'bodykit-paragolpes', name: 'Bodykit y paragolpes', order: 3, description: 'Paragolpes deportivos y body kits completos.', match: /\b(paragolpes|parachoques|body ?kit|kit (de )?carrocer)/i },
+  { id: 'taloneras', name: 'Añadidos y taloneras', order: 5, description: 'Añadidos, taloneras y faldones laterales.', match: /\b(talonera|añadido|fald[oó]n|faldones)/i },
+  { id: 'universales', name: 'Universales', order: 6, description: 'Accesorios universales que sirven para cualquier coche.', match: /.*/ },
 ];
 
+// Marcas que trabaja el cliente (apartado «Marcas» de la tienda: ver CAR_BRANDS). Las demás se
+// conservan tal cual; lo que no es de ninguna marca se marca como «Universal».
 const BRANDS = [
-  ['BMW', /\bbmw\b/i], ['Seat', /\bseat\b/i], ['Cupra', /\bcupra\b/i], ['Audi', /\baudi\b/i],
-  ['Volkswagen', /\b(volkswagen|vw)\b/i], ['Mercedes-Benz', /\bmercedes\b/i], ['Skoda', /\bskoda\b/i],
+  ['BMW', /\bbmw\b/i], ['Seat', /\b(seat|cupra)\b/i], ['Audi', /\baudi\b/i],
+  ['Volkswagen', /\b(volkswagen|vw)\b/i], ['Mercedes', /\bmercedes(?:-benz)?\b/i], ['Skoda', /\bskoda\b/i],
   ['Ford', /\bford\b/i], ['Renault', /\brenault\b/i], ['Peugeot', /\bpeugeot\b/i], ['Opel', /\bopel\b/i],
   ['Toyota', /\btoyota\b/i], ['Honda', /\bhonda\b/i], ['Mini', /\bmini\b/i], ['Hyundai', /\bhyundai\b/i],
   ['Kia', /\bkia\b/i], ['Citroën', /\bcitro[eë]n\b/i], ['Fiat', /\bfiat\b/i], ['Nissan', /\bnissan\b/i],
@@ -64,7 +71,7 @@ export function extractBrandModel(title) {
     const m = title.match(re);
     if (m) return { brand, model: cleanModel(title.slice(m.index)) };
   }
-  return { brand: '', model: '' };
+  return { brand: 'Universal', model: '' };
 }
 
 /** Anuncios que no son accesorios (p. ej. un coche entero a la venta). */
@@ -199,8 +206,7 @@ async function importCatalog({ force }) {
   all.filter((it) => !isAccessory(it)).forEach((it) => console.log(`· Omitido (no es un accesorio): ${it.title}`));
   console.log(`Importando ${items.length} productos en ${projectId}${emulator ? ' (EMULADOR)' : ''}…`);
 
-  const used = new Set(items.map((it) => categorize(it.title)));
-  for (const c of CATEGORIES.filter((x) => used.has(x.id))) {
+  for (const c of CATEGORIES) {
     const ref = db.doc(`categories/${c.id}`);
     if (!(await ref.get()).exists) {
       await ref.set({ name: c.name, slug: c.id, description: c.description, order: c.order, image: '', active: true, createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
@@ -317,15 +323,16 @@ async function exportDemo() {
   }
   // Destacados por defecto: los 8 más recientes (se cambian desde el panel).
   [...products].sort((a, b) => b.createdAt - a.createdAt).slice(0, 8).forEach((p) => { p.featured = true; });
-  const used = new Set(products.map((p) => p.categoryId));
-  const categories = CATEGORIES.filter((c) => used.has(c.id)).map(({ match, ...c }) => ({ ...c, slug: c.id, image: '', active: true }));
+  // Todas las categorías, aunque aún no tengan productos: el cliente las quiere visibles desde el principio.
+  const categories = [...CATEGORIES].sort((a, b) => a.order - b.order).map(({ match, ...c }) => ({ ...c, slug: c.id, image: '', active: true }));
   writeFileSync(join(OUT, 'products.json'), JSON.stringify(products, null, 1));
   writeFileSync(join(OUT, 'categories.json'), JSON.stringify(categories, null, 1));
   console.log(`\n✔ demo/: ${products.length} productos, ${categories.length} categorías`);
 }
 
 // ---------- CLI ----------
-const [cmd, arg] = process.argv.slice(2);
+// Solo al ejecutarlo directamente (scripts/update-categories.js importa las categorías de aquí).
+const [cmd, arg] = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href ? process.argv.slice(2) : [];
 if (cmd === 'fetch' && arg) await fetchCatalog(arg);
 else if (cmd === 'demo') await exportDemo();
 else if (cmd === 'import') await importCatalog({ force: process.argv.includes('--force') }); else if (cmd) {

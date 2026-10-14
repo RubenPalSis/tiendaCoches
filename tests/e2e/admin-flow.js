@@ -86,7 +86,7 @@ await page.waitForSelector('.photo img', { timeout: 20000 });
 await page.fill('#f-name', NAME);
 await page.fill('#f-price', '49,90');
 await page.fill('#f-stock', '2');
-await page.selectOption('#f-category', 'lips-spoilers');
+await page.selectOption('#f-category', 'lip');
 await shot('product_new');
 await page.click('#product-form button[type="submit"]');
 await page.waitForFunction(() => location.hash === '#/productos', null, { timeout: 15000 });

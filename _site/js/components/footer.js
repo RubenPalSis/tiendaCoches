@@ -27,7 +27,7 @@ export function renderFooter(catalog) {
       <p class="footer__title">Catálogo</p>
       <ul class="footer__list">
         <li><a href="/tiendaCoches/catalogo">Todos los productos</a></li>
-        ${categories.slice(0, 8).map((c) => raw(html`<li><a href="${categoryPath(c)}">${c.name}</a></li>`))}
+        ${categories.slice(0, 10).map((c) => raw(html`<li><a href="${categoryPath(c)}">${c.name}</a></li>`))}
       </ul>
     </nav>
     <nav aria-label="Información">

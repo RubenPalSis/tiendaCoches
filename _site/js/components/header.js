@@ -1,6 +1,7 @@
 import { html, raw } from '../shared/escape.js';
 import { formatPrice } from '../shared/money.js';
-import { productPath, categoryPath } from '../shared/slug.js';
+import { productPath, categoryPath, brandPath } from '../shared/slug.js';
+import { CAR_BRANDS } from '../shared/constants.js';
 import { icon, PLACEHOLDER_IMAGE } from '../shared/product-card.js';
 import { qs, qsa, fragment, debounce } from '../core/dom.js';
 import { search } from '../services/search.js';
@@ -69,6 +70,8 @@ function headerMarkup(catalog, { query }) {
     </ul>
     ${categories.length ? raw(html`<p class="menu-list__group">Categorías</p>
     <ul class="menu-list">${categories.map((c) => raw(html`<li><a href="${categoryPath(c)}">${c.name} ${icon('chevron-right', 'icon icon--sm')}</a></li>`))}</ul>`) : ''}
+    <p class="menu-list__group">Marcas</p>
+    <ul class="menu-list">${CAR_BRANDS.map((b) => raw(html`<li><a href="${brandPath(b)}">${b} ${icon('chevron-right', 'icon icon--sm')}</a></li>`))}</ul>
     <p class="menu-list__group">Ayuda</p>
     <ul class="menu-list">
       <li><a href="/tiendaCoches/pedido">Consultar mi pedido ${icon('chevron-right', 'icon icon--sm')}</a></li>
