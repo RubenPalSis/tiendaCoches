@@ -35,13 +35,13 @@ await page.waitForTimeout(31_000); // caché de 30 s del catálogo en el servido
 // Búsqueda con sugerencias
 await page.goto(BASE);
 await page.waitForSelector('#header');
-await page.fill('#hero-search', 'golf gti');
-await page.waitForSelector('#hero-suggest .suggest__item');
-assert.match(await page.textContent('#hero-suggest'), /Golf GTI/i);
+await page.fill('#header-search', 'golf gti');
+await page.waitForSelector('#header-suggest .suggest__item');
+assert.match(await page.textContent('#header-suggest'), /Golf GTI/i);
 await shot('search_suggest');
 step('sugerencias de búsqueda instantánea');
 
-await page.press('#hero-search', 'Enter');
+await page.press('#header-search', 'Enter');
 await page.waitForURL(/catalogo\?q=/);
 await page.waitForSelector('#results .card');
 const found = await page.locator('#results .card').count();

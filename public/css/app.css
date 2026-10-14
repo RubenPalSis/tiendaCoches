@@ -234,12 +234,6 @@ body.no-scroll { overflow: hidden; }
   radial-gradient(ellipse 50% 80% at 95% 30%, rgb(245 18 42 / .25), transparent 60%),
   repeating-linear-gradient(135deg, rgb(255 255 255 / .025) 0 2px, transparent 2px 14px); }
 .hero__inner { position: relative; display: grid; gap: 28px; padding-block: 40px 48px; }
-.hero__search { max-width: 620px; }
-.hero__search .search__input { min-height: 56px; font-size: 17px; padding-right: 64px; }
-.hero__search .search__btn { width: 52px; }
-.hero__hints { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; font-size: .85rem; color: var(--c-on-dark-muted); }
-.hero__hints a { color: var(--c-on-dark); border: 1px solid rgb(255 255 255 / .18); border-radius: 999px; padding: 4px 12px; text-decoration: none; }
-.hero__hints a:hover { border-color: var(--c-accent-bright); color: #fff; }
 .hero__stats { display: grid; grid-template-columns: 1fr; gap: 8px; }
 .hero__stat { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; align-items: center; padding: 12px 16px; border: 1px solid rgb(255 255 255 / .1); border-radius: var(--radius); background: rgb(255 255 255 / .04); }
 .hero__stat .icon { grid-row: span 2; color: var(--c-accent-bright); width: 28px; height: 28px; }
@@ -258,6 +252,7 @@ body.no-scroll { overflow: hidden; }
 .cat-tile__name { font-family: var(--f-display); font-size: 1.2rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; line-height: 1.1; position: relative; }
 .cat-tile__count { font-size: .8rem; color: var(--c-muted); position: relative; }
 .cat-tile__icon { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; color: var(--c-accent); opacity: .9; }
+.cat-tile__logo { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; background: currentColor; -webkit-mask: var(--logo) center / contain no-repeat; mask: var(--logo) center / contain no-repeat; }
 .cat-tile--image { color: #fff; border: 0; min-height: 132px; }
 .cat-tile--image img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cat-tile--image::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgb(10 12 15 / .85), rgb(10 12 15 / .1) 70%); }

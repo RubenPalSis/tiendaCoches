@@ -6,7 +6,6 @@ import { renderProductCard, icon } from '../shared/product-card.js';
 import { freeShippingThreshold } from '../shared/shipping.js';
 import { qs } from '../core/dom.js';
 import { initApp } from '../core/app.js';
-import { enhanceSearch } from '../components/header.js';
 import { categoryIcon, whatsappUrl } from '../components/store-links.js';
 
 const PER_SECTION = 8;
@@ -37,22 +36,17 @@ function renderCategories({ categories, products }) {
   qs('#categories-section').hidden = false;
 }
 
+// Logos de assets/img/marcas (Simple Icons, CC0); «Universal» usa el icono genérico.
+const BRAND_LOGOS = new Set(['Audi', 'BMW', 'Seat', 'Volkswagen', 'Mercedes']);
+
 function renderBrands({ products }) {
   const counts = new Map();
   for (const p of products) if (p.stock > 0) counts.set(p.brand, (counts.get(p.brand) ?? 0) + 1);
-  qs('#brands').innerHTML = CAR_BRANDS.map((b) => html`<a class="cat-tile" href="${brandPath(b)}">${icon('car', 'icon cat-tile__icon')}
+  qs('#brands').innerHTML = CAR_BRANDS.map((b) => html`<a class="cat-tile" href="${brandPath(b)}">${BRAND_LOGOS.has(b)
+    ? raw(html`<span class="cat-tile__logo" style="--logo: url(/assets/img/marcas/${b.toLowerCase()}.svg)" aria-hidden="true"></span>`)
+    : icon('car', 'icon cat-tile__icon')}
     <span class="cat-tile__name">${b}</span><span class="cat-tile__count">${countLabel(counts.get(b))}</span></a>`).join('');
   qs('#brands-section').hidden = false;
-}
-
-function renderHints({ products, categories }) {
-  const brands = [...new Set(products.filter((p) => p.stock > 0 && p.brand).map((p) => p.brand))].slice(0, 4);
-  const hints = [
-    ...brands.map((b) => ({ label: b, href: brandPath(b) })),
-    ...categories.slice(0, 6 - brands.length).map((c) => ({ label: c.name, href: categoryPath(c) })),
-  ];
-  if (!hints.length) return;
-  qs('#hero-hints').innerHTML = html`<span>Populares:</span>${hints.map((h) => raw(html`<a href="${h.href}">${h.label}</a>`))}`;
 }
 
 function renderShippingInfo({ shipping, store }) {
@@ -84,7 +78,6 @@ function renderHero({ store }) {
 }
 
 const { catalog, error } = await initApp();
-enhanceSearch(qs('.hero [data-search]'), catalog);
 renderHero(catalog);
 
 if (!error) {
@@ -96,7 +89,6 @@ if (!error) {
 
   renderCategories(catalog);
   renderBrands(catalog);
-  renderHints(catalog);
   renderShippingInfo(catalog);
   fillGrid('featured', featuredList, 'featured-section');
   fillGrid('offers', offers.slice(0, 4), 'offers-section');
