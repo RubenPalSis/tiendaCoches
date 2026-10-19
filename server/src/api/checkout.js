@@ -3,7 +3,7 @@ import { db, Timestamp } from '../lib/firebase.js';
 import { PublicError, rateLimit, clientIp, requestOrigin } from '../lib/http.js';
 import { getSettings } from '../lib/settings.js';
 import { getStripe } from '../stripe/client.js';
-import { createPendingOrder, releaseReservation, tokenMatches } from '../orders/order-service.js';
+import { createPendingOrder, releaseReservation, expireAndRelease, tokenMatches, hashToken } from '../orders/order-service.js';
 import { validateCartItems, validateCheckoutForm } from '../shared/validation.js';
 import { shippableCountries } from '../shared/shipping.js';
 import { LIMITS } from '../shared/constants.js';
@@ -39,11 +39,14 @@ export async function createCheckout(req) {
 
   // El mismo navegador vuelve a intentarlo (p. ej. botón «Atrás» desde Stripe): se cancela su reserva anterior.
   if (body.previous?.n && body.previous?.t) await cancelOwnPending(body.previous.n, body.previous.t);
-  await enforcePendingLimits(v.email);
+  // En Cloudflare la IP sale de cf-connecting-ip (no se puede falsear); se guarda solo su hash.
+  const ipHash = hashToken(`ip:${clientIp(req)}`).slice(0, 32);
+  await enforcePendingLimits(v.email, ipHash);
   const origin = requestOrigin(req);
   const { id, token, order } = await createPendingOrder(
     {
       origin,
+      ipHash,
       items: cart.items,
       customer: { firstName: v.firstName, lastName: v.lastName, email: v.email, phone: v.phone },
       address: {
@@ -63,9 +66,10 @@ export async function createCheckout(req) {
       {
         mode: 'payment',
         locale: 'es',
-        // Métodos de pago: los que estén activos en Stripe → Configuración → Métodos de pago (Stripe ya
-        // no admite payment_method_types). Dejar tarjetas, Apple Pay y Google Pay; los diferidos llegan
-        // por checkout.session.async_payment_*.
+        // Métodos de pago: los que estén activos en Stripe → Configuración → Métodos de pago (sin
+        // payment_method_types se usan los métodos dinámicos de la cuenta). Recomendado: tarjetas,
+        // Apple Pay y Google Pay. Los diferidos (SEPA…) llegan por checkout.session.async_payment_* y su
+        // reserva no se libera mientras Stripe no confirme que la sesión caducó (releaseStaleReservations).
         adaptive_pricing: { enabled: false }, // siempre en euros (sin conversión de divisa de Stripe)
         customer_email: order.customer.email,
         client_reference_id: id,
@@ -113,45 +117,27 @@ export async function createCheckout(req) {
   }
 }
 
-// Límites que no dependen de la IP (las cabeceras de IP se pueden falsear): evitan que alguien
-// deje todo el catálogo «reservado» creando pagos que nunca completa.
+// Evitan que alguien deje todo el catálogo «reservado» creando pagos que nunca completa.
+// Por email (se puede inventar) y por IP (cf-connecting-ip, fiable en Cloudflare). El límite total
+// solo protege la cuota gratuita de Firestore: es alto para que no sirva para bloquear la tienda.
 const MAX_PENDING_PER_EMAIL = 2;
-const MAX_PENDING_TOTAL = 30;
+const MAX_PENDING_PER_IP = 3;
+const MAX_PENDING_TOTAL = 100;
 
-async function enforcePendingLimits(email) {
+async function enforcePendingLimits(email, ipHash) {
   const pending = db.collection('orders').where('paymentStatus', '==', 'pending');
-  const [byEmail, total] = await Promise.all([
+  const [byEmail, byIp, total] = await Promise.all([
     pending.where('customer.email', '==', email).count().get(),
+    pending.where('ipHash', '==', ipHash).count().get(),
     pending.count().get(),
   ]);
-  if (byEmail.data().count >= MAX_PENDING_PER_EMAIL) {
+  if (byEmail.data().count >= MAX_PENDING_PER_EMAIL || byIp.data().count >= MAX_PENDING_PER_IP) {
     throw new PublicError(429, 'too_many_pending', 'Ya tienes un pago en curso. Complétalo o espera unos minutos antes de intentarlo de nuevo.');
   }
   if (total.data().count >= MAX_PENDING_TOTAL) {
     logger.warn('Demasiados pagos pendientes a la vez', { total: total.data().count });
     throw new PublicError(503, 'busy', 'Hay mucha actividad en este momento. Inténtalo de nuevo en unos minutos.');
   }
-}
-
-/**
- * Caduca la sesión de Stripe y libera la reserva SOLO si Stripe confirma que ya no se puede pagar.
- * @returns {{ released: boolean, items?: {id:string, qty:number}[] }}
- */
-export async function expireAndRelease(orderId, order, { status = 'cancelled', by = 'customer', note } = {}) {
-  if (order.paymentStatus !== 'pending') return { released: false };
-  if (order.stripe?.sessionId) {
-    const stripe = getStripe();
-    let expired = false;
-    try {
-      expired = (await stripe.checkout.sessions.expire(order.stripe.sessionId)).status === 'expired';
-    } catch {
-      const session = await stripe.checkout.sessions.retrieve(order.stripe.sessionId).catch(() => null);
-      expired = session?.status === 'expired';
-    }
-    if (!expired) return { released: false }; // pagada o error temporal: el webhook decidirá
-  }
-  const released = await releaseReservation(orderId, { status, by, note });
-  return { released, items: released ? order.items.map((it) => ({ id: it.productId, qty: it.quantity })) : [] };
 }
 
 async function cancelOwnPending(n, t) {

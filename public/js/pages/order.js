@@ -74,7 +74,7 @@ function orderMarkup(order, opts) {
   <div class="split" style="align-items:start;gap:16px">
     <section class="panel">
       <h2 class="panel__title">Envío</h2>
-      <p style="margin:0">${order.customer.firstName} ${order.customer.lastName}<br>${a.line1}${a.line2 ? `, ${a.line2}` : ''}<br>
+      <p style="margin:0">${order.customer.firstName} ${order.customer.lastName}<br>${a.line1 ? raw(html`${a.line1}${a.line2 ? `, ${a.line2}` : ''}<br>`) : ''}
       ${a.postalCode} ${a.city} (${a.province})<br>${COUNTRIES[a.country] ?? a.country}</p>
       ${order.shipping.deliveryTime ? raw(html`<p class="hint">Plazo habitual: ${order.shipping.deliveryTime}</p>`) : ''}
     </section>

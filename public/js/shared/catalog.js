@@ -20,6 +20,8 @@ export function toIndexEntry(id, p) {
     reserved: (p.reserved || 0) > 0,
     featured: !!p.featured,
     weight: p.weight || 0,
+    // Medidas del paquete en cm (para el peso volumétrico del envío); solo si las tiene.
+    ...(p.length && p.width && p.height ? { dims: [p.length, p.width, p.height] } : {}),
     createdAt: millis(p.createdAt),
   };
 }

@@ -1,17 +1,24 @@
 // Cálculo de gastos de envío a partir de las reglas configurables (settings/shipping).
 // Se usa igual en el navegador (vista previa) y en el servidor (importe que se cobra).
 //
+// Las agencias (GLS incluida) cobran por el MAYOR entre el peso real y el peso volumétrico
+// (largo × ancho × alto en cm / divisor). Cada unidad de un producto se considera un bulto.
+//
 // Estructura de reglas:
 // {
 //   carrier: 'GLS',
 //   defaultWeight: 2000,               // gramos si un producto no tiene peso
+//   volumetricDivisor: 5000,           // cm³ por kg; 0 = solo peso real
+//   bulkyLength: 120,                  // cm: lado más largo a partir del cual el bulto es voluminoso; 0 = nunca
+//   maxLength: 0,                      // cm: lado más largo que se puede enviar sin presupuesto; 0 = sin límite
 //   trackingUrlTemplate: 'https://…{tracking}…',
 //   zones: [{
 //     id, name, active, countries: ['ES'],
 //     postalPrefixes: [],              // vacío = todos
 //     excludePostalPrefixes: ['07', '35', '38', '51', '52'],
 //     rates: [{ maxWeight: 2000, price: 590 }, …],   // gramos / céntimos, ordenados
-//     freeOver: 9900,                  // céntimos; 0 o null = sin envío gratis
+//     freeOver: 9900,                  // céntimos; 0 o null = sin envío gratis (no incluye el recargo)
+//     bulkySurcharge: 1500,            // céntimos por cada bulto voluminoso
 //     deliveryTime: '24–72 h laborables',
 //   }]
 // }
@@ -19,6 +26,9 @@
 export const DEFAULT_SHIPPING_RULES = {
   carrier: 'GLS',
   defaultWeight: 2000,
+  volumetricDivisor: 5000,
+  bulkyLength: 120,
+  maxLength: 0,
   trackingUrlTemplate: '',
   zones: [
     {
@@ -35,6 +45,7 @@ export const DEFAULT_SHIPPING_RULES = {
         { maxWeight: 30000, price: 0 },
       ],
       freeOver: 0,
+      bulkySurcharge: 0,
       deliveryTime: '24–72 h laborables',
     },
   ],
@@ -58,22 +69,61 @@ export function shippableCountries(rules) {
   return [...set];
 }
 
+/** Medidas de una entrada del índice público ({ dims: [l, a, h] }) en el formato de calculateShipping. */
+export const dimsOf = (entry) => (entry?.dims?.length === 3
+  ? { length: entry.dims[0], width: entry.dims[1], height: entry.dims[2] }
+  : {});
+
+/** Medidas del bulto en cm, de mayor a menor (lado más largo primero); [] si no tiene medidas. */
+export function packageDims(item) {
+  const dims = [item.length, item.width, item.height].map((v) => Number(v) || 0);
+  return dims.every((v) => v > 0) ? dims.sort((a, b) => b - a) : [];
+}
+
+/** Peso volumétrico de un bulto en gramos (0 si no tiene medidas o está desactivado). */
+export function volumetricWeight(rules, item) {
+  const divisor = rules?.volumetricDivisor ?? DEFAULT_SHIPPING_RULES.volumetricDivisor;
+  const dims = packageDims(item);
+  if (!divisor || !dims.length) return 0;
+  return Math.ceil((dims[0] * dims[1] * dims[2] * 1000) / divisor);
+}
+
+/** Peso que cobra la agencia por un bulto: el mayor entre el real y el volumétrico (gramos). */
+export function billableWeight(rules, item) {
+  const real = item.weight > 0 ? item.weight : (rules?.defaultWeight ?? 2000);
+  return Math.max(real, volumetricWeight(rules, item));
+}
+
+export function isBulky(rules, item) {
+  const limit = rules?.bulkyLength ?? DEFAULT_SHIPPING_RULES.bulkyLength;
+  return limit > 0 && (packageDims(item)[0] ?? 0) > limit;
+}
+
+/** Peso facturable total del pedido (gramos). */
 export function totalWeight(rules, items) {
-  const fallback = rules?.defaultWeight ?? 2000;
-  return items.reduce((sum, it) => sum + (it.weight > 0 ? it.weight : fallback) * it.quantity, 0);
+  return items.reduce((sum, it) => sum + billableWeight(rules, it) * it.quantity, 0);
 }
 
 /**
  * @param rules  settings/shipping
- * @param input  { items: [{ weight, quantity }], subtotal, country, postalCode }
- * @returns { ok: true, cost, free, zone, weight } | { ok: false, reason, message }
+ * @param input  { items: [{ weight, length, width, height, quantity }], subtotal, country, postalCode }
+ * @returns { ok: true, cost, free, zone, weight, realWeight, bulky, surcharge } | { ok: false, reason, message }
  */
 export function calculateShipping(rules, { items, subtotal, country, postalCode }) {
   const zone = findZone(rules, country, postalCode);
   if (!zone) {
     return { ok: false, reason: 'no_zone', message: 'Lo sentimos, todavía no enviamos a esta dirección.' };
   }
+  const maxLength = rules?.maxLength ?? 0;
+  if (maxLength > 0 && items.some((it) => (packageDims(it)[0] ?? 0) > maxLength)) {
+    return {
+      ok: false,
+      reason: 'too_big',
+      message: 'Alguna pieza supera las medidas máximas de envío. Contacta con nosotros y te daremos un presupuesto.',
+    };
+  }
   const weight = totalWeight(rules, items);
+  const realWeight = items.reduce((sum, it) => sum + (it.weight > 0 ? it.weight : (rules?.defaultWeight ?? 2000)) * it.quantity, 0);
   const rates = [...(zone.rates ?? [])].sort((a, b) => a.maxWeight - b.maxWeight);
   const rate = rates.find((r) => weight <= r.maxWeight);
   if (!rate) {
@@ -83,8 +133,11 @@ export function calculateShipping(rules, { items, subtotal, country, postalCode 
       message: 'El pedido supera el peso máximo de envío. Contacta con nosotros y te daremos un presupuesto.',
     };
   }
+  const bulky = items.reduce((sum, it) => sum + (isBulky(rules, it) ? it.quantity : 0), 0);
+  // El recargo por bulto voluminoso se cobra siempre: la agencia lo cobra aunque el envío sea gratis.
+  const surcharge = bulky * (zone.bulkySurcharge ?? 0);
   const free = zone.freeOver > 0 && subtotal >= zone.freeOver;
-  return { ok: true, cost: free ? 0 : rate.price, free, zone, weight };
+  return { ok: true, cost: (free ? 0 : rate.price) + surcharge, free, zone, weight, realWeight, bulky, surcharge };
 }
 
 /** Importe de envío más bajo de la zona principal, para mostrar "Envío desde X". */

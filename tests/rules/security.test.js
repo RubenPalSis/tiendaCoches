@@ -82,6 +82,11 @@ test('admin: validación de datos del producto', async () => {
   await assertFails(updateDoc(doc(db, 'products', PRODUCT_ID), { reserved: 5, updatedAt: serverTimestamp() }));
   await assertFails(updateDoc(doc(db, 'products', PRODUCT_ID), { soldCount: 99, updatedAt: serverTimestamp() }));
   await assertFails(setDoc(doc(db, 'products/OtroProducto123456789'), validProduct({ reserved: 2, slug: 'x-OtroProducto123456789' })));
+  // Medidas del paquete: enteros en cm entre 0 y 500
+  await assertSucceeds(updateDoc(doc(db, 'products', PRODUCT_ID), { length: 180, width: 50, height: 30, updatedAt: serverTimestamp() }));
+  await assertFails(updateDoc(doc(db, 'products', PRODUCT_ID), { length: 501, updatedAt: serverTimestamp() }));
+  await assertFails(updateDoc(doc(db, 'products', PRODUCT_ID), { width: 12.5, updatedAt: serverTimestamp() }));
+  await assertFails(updateDoc(doc(db, 'products', PRODUCT_ID), { height: '30', updatedAt: serverTimestamp() }));
 });
 
 test('admin: no puede borrar un producto con unidades reservadas en un pago', async () => {

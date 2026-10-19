@@ -15,6 +15,7 @@ import { addDays, addMinutes, dayKey } from '../lib/dates.js';
 import { calculateShipping } from '../shared/shipping.js';
 import { LIMITS } from '../shared/constants.js';
 import { syncProductsInIndexSafe } from '../catalog/catalog-index.js';
+import { getStripe } from '../stripe/client.js';
 
 export const UNPAID_RETENTION_DAYS = 30;
 
@@ -76,6 +77,9 @@ export async function createPendingOrder(input, shippingRules) {
         unitPrice: p.price,
         quantity: qty,
         weight: p.weight || 0,
+        length: p.length || 0,
+        width: p.width || 0,
+        height: p.height || 0,
         image: p.images?.[0]?.sm || '',
       });
     });
@@ -97,6 +101,7 @@ export async function createPendingOrder(input, shippingRules) {
     const data = {
       number: formatOrderNumber(seq, now),
       siteOrigin: input.origin || '',
+      ipHash: input.ipHash || '',
       accessTokenHash: hashToken(token),
       paymentStatus: 'pending',
       orderStatus: 'pending',
@@ -113,7 +118,10 @@ export async function createPendingOrder(input, shippingRules) {
         zoneId: shipping.zone.id,
         zoneName: shipping.zone.name,
         deliveryTime: shipping.zone.deliveryTime || '',
-        weight: shipping.weight,
+        weight: shipping.weight, // peso facturable (el mayor entre real y volumétrico)
+        realWeight: shipping.realWeight,
+        bulky: shipping.bulky,
+        bulkySurcharge: shipping.surcharge,
         trackingNumber: '',
         trackingUrl: '',
       },
@@ -190,6 +198,15 @@ export async function markOrderPaid({ eventId, orderId, sessionId, amountTotal, 
     const order = orderSnap.data();
     if (!orderSnap.exists || order.stripe?.sessionId !== sessionId || order.total !== amountTotal || currency !== 'eur') {
       logger.error('Pago que no coincide con el pedido', { orderId, sessionId, amountTotal, currency });
+      // Stripe ha cobrado, pero no lo que esperaba el pedido: se deja un aviso visible en el panel
+      // (sin esto el cobro solo quedaría en el registro y nadie lo vería).
+      if (orderSnap.exists) {
+        tx.update(orderRef, {
+          needsReview: `Stripe ha cobrado ${((amountTotal ?? 0) / 100).toFixed(2)} ${String(currency || '').toUpperCase()} (sesión ${sessionId}), que no coincide con este pedido. Revisa el pago en Stripe y reembolsa o confirma a mano.`,
+          updatedAt: FieldValue.serverTimestamp(),
+          history: FieldValue.arrayUnion(historyEntry(order.orderStatus, order.orderStatus, 'stripe', 'Pago que no coincide con el pedido')),
+        });
+      }
       markEvent();
       return { result: 'mismatch', orderId };
     }
@@ -254,7 +271,32 @@ export async function markOrderPaid({ eventId, orderId, sessionId, amountTotal, 
   return result;
 }
 
-/** Libera reservas cuya sesión de Stripe ya caducó y cuyo webhook no llegó (red de seguridad). */
+/**
+ * Caduca la sesión de Stripe y libera la reserva SOLO si Stripe confirma que ya no se puede pagar.
+ * @returns {{ released: boolean, items?: {id:string, qty:number}[] }}
+ */
+export async function expireAndRelease(orderId, order, { status = 'cancelled', by = 'customer', note } = {}) {
+  if (order.paymentStatus !== 'pending') return { released: false };
+  if (order.stripe?.sessionId) {
+    const stripe = getStripe();
+    let expired = false;
+    try {
+      expired = (await stripe.checkout.sessions.expire(order.stripe.sessionId)).status === 'expired';
+    } catch {
+      const session = await stripe.checkout.sessions.retrieve(order.stripe.sessionId).catch(() => null);
+      expired = session?.status === 'expired';
+    }
+    if (!expired) return { released: false }; // pagada o error temporal: el webhook decidirá
+  }
+  const released = await releaseReservation(orderId, { status, by, note });
+  return { released, items: released ? order.items.map((it) => ({ id: it.productId, qty: it.quantity })) : [] };
+}
+
+/**
+ * Libera reservas cuya sesión de Stripe ya caducó y cuyo webhook no llegó (red de seguridad).
+ * Pregunta antes a Stripe: con pagos diferidos (SEPA…) la sesión queda «complete» sin pagar durante
+ * días y el pedido sigue pendiente; liberar su stock permitiría vender dos veces la misma pieza.
+ */
 export async function releaseStaleReservations(graceMinutes = 15) {
   const cutoff = Timestamp.fromDate(addMinutes(new Date(), -graceMinutes));
   const snap = await db.collection('orders')
@@ -263,7 +305,14 @@ export async function releaseStaleReservations(graceMinutes = 15) {
     .limit(100)
     .get();
   let released = 0;
-  for (const doc of snap.docs) if (await releaseReservation(doc.id, { note: 'Reserva caducada' })) released += 1;
+  for (const doc of snap.docs) {
+    try {
+      const out = await expireAndRelease(doc.id, doc.data(), { status: 'expired', by: 'system', note: 'Reserva caducada' });
+      if (out.released) released += 1;
+    } catch (err) {
+      logger.warn('No se pudo comprobar la reserva en Stripe', { orderId: doc.id, message: err.message });
+    }
+  }
   return released;
 }
 

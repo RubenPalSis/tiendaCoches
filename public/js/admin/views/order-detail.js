@@ -8,6 +8,13 @@ import { viewHead, statusBadge, paymentBadge, fmtDateTime, errorBox, toast, dial
 import { refreshOrdersBadge } from '../app.js';
 import { listProducts } from '../data.js';
 
+/** Bultos para preparar el envío: unidades y medidas de cada pieza (si las tiene). */
+function packagesText(o) {
+  const lines = o.items.map((it) => html`${it.quantity} × ${it.name}${it.length && it.width && it.height ? ` — ${it.length}×${it.width}×${it.height} cm` : ''}`);
+  const bulky = o.shipping.bulky ? html`<br><strong>${o.shipping.bulky} voluminoso${o.shipping.bulky === 1 ? '' : 's'}</strong>` : '';
+  return lines.join('<br>') + bulky;
+}
+
 const EMAIL_LABELS = { confirmation: 'Confirmación', shipped: 'Envío', cancelled: 'Cancelación' };
 
 const ACTION_LABELS = {
@@ -59,7 +66,8 @@ function markup(o) {
         <div class="address-block">${addressText(o)}</div>
         ${o.shippingAddress.notes ? raw(html`<p style="margin:10px 0 0"><strong>Notas del cliente:</strong> ${o.shippingAddress.notes}</p>`) : ''}
         <dl class="kv" style="margin-top:12px">
-          <div><dt>Peso estimado</dt><dd>${(o.shipping.weight / 1000).toLocaleString('es-ES')} kg</dd></div>
+          <div><dt>${o.shipping.realWeight != null ? 'Peso facturable' : 'Peso estimado'}</dt><dd>${(o.shipping.weight / 1000).toLocaleString('es-ES')} kg${o.shipping.realWeight != null && o.shipping.realWeight !== o.shipping.weight ? ` (real ${(o.shipping.realWeight / 1000).toLocaleString('es-ES')} kg, cobra por volumen)` : ''}</dd></div>
+          <div><dt>Bultos</dt><dd>${raw(packagesText(o))}</dd></div>
           ${o.shipping.trackingNumber ? raw(html`<div><dt>Seguimiento</dt><dd><span class="mono">${o.shipping.trackingNumber}</span>
             ${o.shipping.trackingUrl ? raw(html` · <a href="${o.shipping.trackingUrl}" target="_blank" rel="noopener">Ver en ${o.shipping.carrier}</a>`) : ''}</dd></div>`) : ''}
           ${o.shipping.shippedAt ? raw(html`<div><dt>Enviado</dt><dd>${fmtDateTime(o.shipping.shippedAt)}</dd></div>`) : ''}

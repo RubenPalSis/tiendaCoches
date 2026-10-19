@@ -81,7 +81,9 @@ export async function verifyIdToken(token) {
     const project = projectId();
     const now = Math.floor(Date.now() / 1000);
 
-    if (FIREBASE_AUTH_EMULATOR_HOST.value()) {
+    // Tokens sin firmar solo con el emulador Y un proyecto «demo-…» (que no existe en Firebase): si la
+    // variable del emulador acabara por error en producción, el proyecto real sigue exigiendo firma.
+    if (FIREBASE_AUTH_EMULATOR_HOST.value() && project.startsWith('demo-')) {
       if (header.alg !== 'none' && header.alg !== 'RS256') return null;
     } else {
       if (header.alg !== 'RS256' || !s) return null;

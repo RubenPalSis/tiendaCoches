@@ -23,6 +23,12 @@ test-results/
 playwright-report/
 tests/e2e/screenshots/
 
+# Vista previa estática: la genera el workflow de GitHub Pages (node scripts/build-static.js)
+_site/
+
+# Anuncios y fotos originales descargados de Wallapop (scripts/wallapop-import.js fetch)
+data/
+
 # Copia de demo/img que se publica con la web (la genera scripts/copy-shared.js)
 public/media/
 

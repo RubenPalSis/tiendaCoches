@@ -56,9 +56,9 @@ documento, irrelevante para este volumen.
 
 | Colección | Contenido | Acceso |
 |---|---|---|
-| `products/{id}` | name, slug, price (céntimos), comparePrice, stock, reserved, soldCount, weight (g), condition, conditionNotes, reference, brand, model, compatibility, description, categoryId, images[{sm,md,lg,publicId}], active, featured, createdAt, updatedAt | admin (validado por reglas; `reserved`/`soldCount` solo backend) |
+| `products/{id}` | name, slug, price (céntimos), comparePrice, stock, reserved, soldCount, weight (g), length/width/height (cm, paquete), condition, conditionNotes, reference, brand, model, compatibility, description, categoryId, images[{sm,md,lg,publicId}], active, featured, createdAt, updatedAt | admin (validado por reglas; `reserved`/`soldCount` solo backend) |
 | `categories/{slug}` | name, slug, description, order, image, active | admin |
-| `orders/{id}` | number, accessTokenHash, paymentStatus, orderStatus, customer, shippingAddress, items (snapshot), subtotal, shippingCost, total, shipping{carrier, zone, weight, trackingNumber, trackingUrl, shippedAt…}, stripe{sessionId, paymentIntentId}, legal{termsVersion, acceptedAt}, history[], withdrawal, deleteAt (borrado por la tarea horaria si no se paga) | lectura admin; escritura solo el servidor |
+| `orders/{id}` | number, accessTokenHash, paymentStatus, orderStatus, customer, shippingAddress, items (snapshot), subtotal, shippingCost, total, shipping{carrier, zone, weight (facturable), realWeight, bulky, bulkySurcharge, trackingNumber, trackingUrl, shippedAt…}, stripe{sessionId, paymentIntentId}, legal{termsVersion, acceptedAt}, history[], withdrawal, deleteAt (borrado por la tarea horaria si no se paga) | lectura admin; escritura solo el servidor |
 | `settings/store` · `shipping` · `checkout` | datos de la tienda, reglas de envío, opciones de venta | admin (lo público se sirve por `/api/catalog`) |
 | `catalog/index` | índice compacto de productos activos + categorías | solo el servidor |
 | `statistics/day_YYYY-MM-DD` | pageViews, productViews{id}, addToCart, checkoutStarted, orders, revenue, itemsSold, productSales{id} | lectura admin |

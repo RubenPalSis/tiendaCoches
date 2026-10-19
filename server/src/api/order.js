@@ -35,6 +35,20 @@ export function publicOrderView(id, o) {
   };
 }
 
+/**
+ * Vista reducida para la consulta con número + email (sin el enlace secreto del email): los números de
+ * pedido son correlativos, así que no se muestran la calle ni los apellidos de la dirección.
+ */
+export function limitedOrderView(id, o) {
+  const view = publicOrderView(id, o);
+  const { postalCode, city, province, country } = o.shippingAddress ?? {};
+  return {
+    ...view,
+    customer: { ...view.customer, lastName: view.customer.lastName ? `${view.customer.lastName[0]}.` : '' },
+    shippingAddress: { postalCode, city, province, country },
+  };
+}
+
 /** GET /api/order?n=<id>&t=<token> */
 export async function getPublicOrder(req) {
   rateLimit(`order:${clientIp(req)}`, { limit: 60, windowMs: 5 * 60_000 });
@@ -61,22 +75,25 @@ export async function requestWithdrawal(req) {
   }
 
   const snap = await db.collection('orders').where('number', '==', number).limit(1).get();
-  const doc = snap.docs[0];
-  const order = doc?.data();
-  if (!doc || order.customer.email !== mail || !['paid', 'preparing', 'shipped', 'delivered'].includes(order.orderStatus)) {
-    throw new PublicError(404, 'not_found', 'No encontramos un pedido pagado con ese número y email.');
-  }
-  if (order.withdrawal?.requestedAt) {
-    return { alreadyRequested: true, requestedAt: order.withdrawal.requestedAt.toDate().toISOString() };
-  }
+  const ref = snap.docs[0]?.ref;
+  const notFound = () => new PublicError(404, 'not_found', 'No encontramos un pedido pagado con ese número y email.');
+  if (!ref) throw notFound();
 
+  // En una transacción: dos envíos a la vez del formulario solo registran (y notifican) una solicitud.
   const requestedAt = Timestamp.now();
-  await doc.ref.update({
-    withdrawal: { requestedAt, message: text },
-    updatedAt: FieldValue.serverTimestamp(),
-    history: FieldValue.arrayUnion({ from: order.orderStatus, to: order.orderStatus, by: 'customer', at: requestedAt, note: 'Solicitud de desistimiento' }),
+  const outcome = await db.runTransaction(async (tx) => {
+    const order = (await tx.get(ref)).data();
+    if (!order || order.customer.email !== mail || !['paid', 'preparing', 'shipped', 'delivered'].includes(order.orderStatus)) throw notFound();
+    if (order.withdrawal?.requestedAt) return { already: order.withdrawal.requestedAt };
+    tx.update(ref, {
+      withdrawal: { requestedAt, message: text },
+      updatedAt: FieldValue.serverTimestamp(),
+      history: FieldValue.arrayUnion({ from: order.orderStatus, to: order.orderStatus, by: 'customer', at: requestedAt, note: 'Solicitud de desistimiento' }),
+    });
+    return { order };
   });
-  await sendWithdrawalEmails({ id: doc.id, ...order }, text, requestedAt.toDate());
+  if (outcome.already) return { alreadyRequested: true, requestedAt: outcome.already.toDate().toISOString() };
+  await sendWithdrawalEmails({ id: ref.id, ...outcome.order }, text, requestedAt.toDate());
   return { alreadyRequested: false, requestedAt: requestedAt.toDate().toISOString() };
 }
 
@@ -93,5 +110,5 @@ export async function lookupOrder(req) {
   if (!doc || doc.data().customer.email !== email || doc.data().paymentStatus === 'pending') {
     throw new PublicError(404, 'not_found', 'No encontramos un pedido con ese número y email.');
   }
-  return publicOrderView(doc.id, doc.data());
+  return limitedOrderView(doc.id, doc.data());
 }

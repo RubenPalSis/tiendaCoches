@@ -7,8 +7,24 @@ import { productSlug, productPath } from '../../shared/slug.js';
 import { CONDITIONS, SIZE_PRESETS, LIMITS, CAR_BRANDS } from '../../shared/constants.js';
 import { qs, qsa, on, setLoading } from '../../core/dom.js';
 import { viewHead, toast, confirmDialog, errorBox } from '../ui.js';
-import { getProduct, listCategories, updateProductCache, removeFromProductCache, syncProductIndex } from '../data.js';
+import { getProduct, getSettingsDoc, listCategories, updateProductCache, removeFromProductCache, syncProductIndex } from '../data.js';
 import { uploadImage, deleteImages } from '../uploads.js';
+import { billableWeight, isBulky, DEFAULT_SHIPPING_RULES } from '../../shared/shipping.js';
+
+const dimInput = (name, label, value) => html`<div class="field"><label class="field__label" for="f-${name}">${label}</label>
+  <div class="input-suffix"><input class="input" id="f-${name}" name="${name}" inputmode="numeric" maxlength="3" value="${value || ''}"><span>cm</span></div></div>`;
+
+const kg = (g) => `${(g / 1000).toLocaleString('es-ES', { maximumFractionDigits: 1 })} kg`;
+
+/** Aviso bajo las medidas: peso que cobrará la agencia y si el bulto es voluminoso. */
+function packageHint(item, rules) {
+  if (!item.length || !item.width || !item.height) return 'Opcional, pero muy recomendable en piezas grandes y ligeras (paragolpes, taloneras, alerones): la agencia cobra por volumen.';
+  const billable = billableWeight(rules, item);
+  const parts = [`Se cobrará el envío como ${kg(billable)}${billable > (item.weight || 0) ? ' (por volumen)' : ''}.`];
+  if (rules.maxLength > 0 && Math.max(item.length, item.width, item.height) > rules.maxLength) parts.push(`Supera la medida máxima de envío (${rules.maxLength} cm): el cliente no podrá pagarla online.`);
+  else if (isBulky(rules, item)) parts.push('Bulto voluminoso: se suma el recargo de Ajustes → Envíos.');
+  return parts.join(' ');
+}
 
 const sizeFor = (weight) => SIZE_PRESETS.find((s) => s.weight === weight)?.id ?? (weight ? 'custom' : 'S');
 
@@ -72,6 +88,12 @@ function formMarkup(p, categories, isNew) {
               <label><input type="radio" name="size" value="custom"${size === 'custom' ? raw(' checked') : ''}><span>Peso exacto</span></label></div>
             <div class="input-suffix" id="weight-wrap" style="margin-top:8px"${size === 'custom' ? '' : raw(' hidden')}>
               <input class="input" name="weightKg" inputmode="decimal" value="${p.weight ? String(p.weight / 1000).replace('.', ',') : ''}" placeholder="Peso con embalaje" aria-label="Peso exacto en kg"><span>kg</span></div>
+          </div>
+          <div class="field" data-field="length">
+            <span class="field__label">Medidas del paquete con embalaje <span class="opt">(opcional)</span></span>
+            <div class="inline-fields">${raw(dimInput('length', 'Largo', p.length))}${raw(dimInput('width', 'Ancho', p.width))}${raw(dimInput('height', 'Alto', p.height))}</div>
+            <span class="field__hint" id="package-hint"></span>
+            <span class="field__error" hidden></span>
           </div>
         </section>
         <section class="box form-stack">
@@ -144,6 +166,17 @@ function showErrors(form, errors) {
   if (first) form.querySelector(`[name="${first}"]`)?.focus();
 }
 
+/** Largo, ancho y alto en cm (enteros). Los tres vacíos = sin medidas. */
+function readDims(d) {
+  const raw3 = ['length', 'width', 'height'].map((k) => String(d.get(k) ?? '').trim().replace(',', '.'));
+  if (raw3.every((v) => !v)) return { length: 0, width: 0, height: 0 };
+  const [length, width, height] = raw3.map((v) => Math.round(parseFloat(v)));
+  if (![length, width, height].every((v) => Number.isInteger(v) && v > 0 && v <= 500)) {
+    return { length: 0, width: 0, height: 0, error: 'Rellena largo, ancho y alto en cm (entre 1 y 500), o deja los tres vacíos.' };
+  }
+  return { length, width, height };
+}
+
 function readForm(form, original) {
   const d = new FormData(form);
   const errors = {};
@@ -161,6 +194,8 @@ function readForm(form, original) {
   if (price == null || price < 0) errors.price = 'Introduce un precio válido (ej.: 45,00).';
   if (comparePriceRaw && (comparePrice == null || comparePrice <= price)) errors.comparePrice = 'Debe ser mayor que el precio actual (o déjalo vacío).';
   if (!Number.isInteger(stock) || stock < 0) errors.stock = 'Número de unidades no válido.';
+  const dims = readDims(d);
+  if (dims.error) errors.length = dims.error;
 
   return {
     errors,
@@ -170,6 +205,9 @@ function readForm(form, original) {
       comparePrice,
       stock,
       weight,
+      length: dims.length,
+      width: dims.width,
+      height: dims.height,
       condition: d.get('condition') || 'used',
       conditionNotes: String(d.get('conditionNotes') ?? '').trim(),
       categoryId: d.get('categoryId') || '',
@@ -254,8 +292,19 @@ export async function render(view, { params, firebase }) {
     else removedOnSave.push(img);
     drawPhotos();
   });
+  // Reglas de envío para el aviso de peso facturable (si no se pueden leer, las de por defecto).
+  let shippingRules = DEFAULT_SHIPPING_RULES;
+  const drawPackageHint = () => {
+    const { data } = readForm(form, original);
+    qs('#package-hint', view).textContent = packageHint(data, shippingRules);
+  };
+  getSettingsDoc('shipping').then((s) => { if (s) shippingRules = { ...DEFAULT_SHIPPING_RULES, ...s }; drawPackageHint(); }).catch(() => {});
+  drawPackageHint();
   form.addEventListener('change', (e) => {
     if (e.target.name === 'size') qs('#weight-wrap', view).hidden = e.target.value !== 'custom';
+  });
+  form.addEventListener('input', (e) => {
+    if (['length', 'width', 'height', 'weightKg', 'size'].includes(e.target.name)) drawPackageHint();
   });
 
   form.addEventListener('submit', async (e) => {

@@ -115,3 +115,13 @@ ${message ? `<p>Mensaje: «${esc(message)}»</p>` : ''}
 ${itemsTable(order)}`);
   return { subject, html, text: `Solicitud de desistimiento del pedido ${order.number}.` };
 }
+
+export function sellerPaymentAlertEmail(store, order, detail, adminUrl) {
+  const subject = `⚠️ Revisa un pago${order?.number ? ` · Pedido ${order.number}` : ''}`;
+  const html = layout(store, subject, `
+<h1 style="font-size:22px;margin:0 0 8px">Pago que no coincide con el pedido</h1>
+<p>${esc(detail)}</p>
+<p style="color:${C.muted}">El pedido no se ha marcado como pagado. Compruébalo en Stripe y reembolsa el cobro o atiéndelo a mano.</p>
+${adminUrl ? button(adminUrl, 'Abrir en el panel') : ''}`);
+  return { subject, html, text: `${subject}. ${detail}` };
+}

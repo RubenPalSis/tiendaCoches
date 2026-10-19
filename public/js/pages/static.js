@@ -37,7 +37,10 @@ if (ratesEl) {
       <table><thead><tr><th>Peso total del pedido</th><th>Precio (IVA incluido)</th></tr></thead><tbody>
       ${[...z.rates].sort((a, b) => a.maxWeight - b.maxWeight).map((r) => raw(html`<tr><td>Hasta ${(r.maxWeight / 1000).toLocaleString('es-ES')} kg</td><td>${r.price ? formatPrice(r.price) : 'Gratis'}</td></tr>`))}
       </tbody></table>
-      ${z.freeOver ? raw(html`<p><strong>Envío gratis</strong> en pedidos desde ${formatPrice(z.freeOver)}.</p>`) : ''}`).join('')
+      ${z.freeOver ? raw(html`<p><strong>Envío gratis</strong> en pedidos desde ${formatPrice(z.freeOver)}.</p>`) : ''}
+      ${z.bulkySurcharge && shipping.bulkyLength ? raw(html`<p>Las piezas cuyo paquete mide más de ${shipping.bulkyLength} cm de largo tienen un recargo de ${formatPrice(z.bulkySurcharge)} por pieza${z.freeOver ? ', también en pedidos con envío gratis' : ''}.</p>`) : ''}`).join('')
+      + (shipping.volumetricDivisor ?? 5000 ? html`<p>El peso de cada pieza es el mayor entre su peso real y su <strong>peso volumétrico</strong> (largo × ancho × alto del paquete en cm ÷ ${shipping.volumetricDivisor ?? 5000}), como calculan las agencias de transporte. El precio exacto aparece en el pago antes de confirmar.</p>` : '')
+      + (shipping.maxLength ? html`<p>Las piezas de más de ${shipping.maxLength} cm requieren presupuesto: contacta con nosotros.</p>` : '')
     : html`<p class="missing-data">[pendiente: configurar tarifas de envío en el panel]</p>`;
 }
 

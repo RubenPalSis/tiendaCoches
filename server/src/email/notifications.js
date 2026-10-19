@@ -3,7 +3,7 @@ import { getSettings } from '../lib/settings.js';
 import { sendMail } from './mailer.js';
 import {
   orderConfirmationEmail, orderShippedEmail, orderCancelledEmail,
-  sellerNewOrderEmail, withdrawalReceiptEmail, sellerWithdrawalEmail,
+  sellerNewOrderEmail, withdrawalReceiptEmail, sellerWithdrawalEmail, sellerPaymentAlertEmail,
 } from './templates.js';
 
 const sellerEmail = (store) => store.notificationEmail || store.email;
@@ -46,4 +46,11 @@ export async function sendWithdrawalEmails(order, message, requestedAt) {
     sendMail({ to: order.customer.email, ...withdrawalReceiptEmail(store, order, message, requestedAt) }),
     sendMail({ to: sellerEmail(store), ...sellerWithdrawalEmail(store, order, message) }),
   ]);
+}
+
+/** Aviso al vendedor de un cobro de Stripe que no cuadra con el pedido (no se marca como pagado). */
+export async function sendPaymentAlertEmail(orderId, order, detail) {
+  const store = await getSettings('store');
+  const adminUrl = order?.siteOrigin ? `${order.siteOrigin}/admin/#/pedidos/${orderId}` : '';
+  await sendMail({ to: sellerEmail(store), ...sellerPaymentAlertEmail(store, order, detail, adminUrl) });
 }

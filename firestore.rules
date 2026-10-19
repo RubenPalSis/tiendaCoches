@@ -1,10 +1,10 @@
 rules_version = '2';
 
 // Modelo de seguridad:
-// - La tienda pública NO lee Firestore directamente: usa /api (Cloud Functions + Admin SDK),
+// - La tienda pública NO lee Firestore directamente: usa /api (Worker de Cloudflare con cuenta de servicio),
 //   así nadie puede descargar la base de datos ni generar lecturas masivas.
 // - El panel lee/escribe con el SDK de cliente y solo si el usuario tiene el custom claim admin == true.
-// - Pedidos, contadores, índice y estadísticas solo los escriben las Functions.
+// - Pedidos, contadores, índice y estadísticas solo los escribe el Worker.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -31,7 +31,7 @@ service cloud.firestore {
     function validProduct(d) {
       return d.keys().hasOnly([
           'name', 'slug', 'description', 'reference', 'brand', 'model', 'compatibility',
-          'categoryId', 'price', 'comparePrice', 'stock', 'reserved', 'soldCount', 'weight',
+          'categoryId', 'price', 'comparePrice', 'stock', 'reserved', 'soldCount', 'weight', 'length', 'width', 'height',
           'images', 'active', 'featured', 'condition', 'conditionNotes', 'createdAt', 'updatedAt'])
         && d.keys().hasAll(['name', 'slug', 'price', 'stock', 'reserved', 'soldCount', 'active', 'images', 'createdAt', 'updatedAt'])
         && str(d.name, 2, 150)
@@ -40,6 +40,9 @@ service cloud.firestore {
         && (!('comparePrice' in d) || d.comparePrice == null || intIn(d.comparePrice, 0, 10000000))
         && intIn(d.stock, 0, 100000)
         && (!('weight' in d) || intIn(d.weight, 0, 1000000))
+        && (!('length' in d) || intIn(d.length, 0, 500))
+        && (!('width' in d) || intIn(d.width, 0, 500))
+        && (!('height' in d) || intIn(d.height, 0, 500))
         && validImages(d.images)
         && d.active is bool
         && (!('featured' in d) || d.featured is bool)
@@ -94,7 +97,7 @@ service cloud.firestore {
 
     match /orders/{orderId} {
       allow read: if isAdmin();
-      allow write: if false; // solo Cloud Functions (adminAction, checkout, webhook)
+      allow write: if false; // solo el Worker (adminAction, checkout, webhook)
     }
 
     match /statistics/{day} {

@@ -15,7 +15,23 @@ una agencia/ParcelShop como si usa el portal de GLS:
    si está configurada, la URL de seguimiento (`trackingUrlTemplate` con `{tracking}`).
 6. «Marcar como entregado».
 
-El peso de cada pieza sale del «tamaño del paquete» (2/5/15/30 kg) o de un peso exacto.
+### Peso, medidas y peso volumétrico
+
+Cada unidad vendida es un bulto. El envío se cobra por el **peso facturable** del pedido: la suma, bulto
+a bulto, del mayor entre el peso real y el peso volumétrico (`largo × ancho × alto (cm) ÷ divisor`), que
+es como factura GLS. Se busca el tramo de la zona con ese peso.
+
+- **Peso real:** «tamaño del paquete» de la ficha (2/5/15/30 kg) o peso exacto.
+- **Medidas** (opcionales, en cm, con embalaje): largo, ancho y alto en la ficha. Sin medidas solo cuenta el peso real.
+- **Ajustes → Envíos → Peso volumétrico y medidas:**
+  - `volumetricDivisor` (5000 por defecto; 0 = solo peso real). **Confirmar con GLS** el de su contrato.
+  - `bulkyLength`: un bulto cuyo lado más largo supera esta medida es voluminoso y suma el recargo
+    `bulkySurcharge` de la zona (por bulto, también con envío gratis).
+  - `maxLength`: por encima no se puede pagar online; se pide al cliente que solicite presupuesto.
+- En el pedido, el panel muestra el peso facturable, el real y los bultos con sus medidas para
+  documentar el envío en GLS.
+
+Código: `public/js/shared/shipping.js` (el mismo cálculo en el navegador y en el servidor).
 
 ## Integración futura (preparada, NO implementada)
 
@@ -38,7 +54,8 @@ Hoy solo existe `manual.js`. Para automatizar:
 
 1. ¿Envía como particular (agencia/ParcelShop) o tiene contrato/cuenta de cliente con GLS?
 2. ¿Cómo crea hoy los envíos? (portal web de GLS, la agencia lo recoge, en mostrador…)
-3. ¿Qué tarifas paga por peso/destino? ¿A qué destinos quiere enviar?
+3. ¿Qué tarifas paga por peso/destino? ¿A qué destinos quiere enviar? ¿Qué divisor de peso volumétrico
+   aplica GLS a su cuenta, qué medidas máximas admite y cuánto cobra por bulto voluminoso o fuera de medidas?
 4. Que pregunte a su agencia GLS: «¿Ofrecéis integración para tiendas online (API o módulo web)?
    ¿Qué requisitos tiene y qué documentación técnica dais?». Solo necesitamos el nombre del servicio
    y la documentación; las credenciales se configurarían directamente como secretos.

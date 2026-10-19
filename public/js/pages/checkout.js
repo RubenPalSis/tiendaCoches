@@ -1,7 +1,7 @@
 import { html, raw } from '../shared/escape.js';
 import { formatPrice } from '../shared/money.js';
 import { icon, PLACEHOLDER_IMAGE } from '../shared/product-card.js';
-import { calculateShipping, shippableCountries } from '../shared/shipping.js';
+import { calculateShipping, shippableCountries, dimsOf } from '../shared/shipping.js';
 import { validateCheckoutForm } from '../shared/validation.js';
 import { provinceFromPostalCode } from '../shared/provinces.js';
 import { COUNTRIES } from '../shared/constants.js';
@@ -196,7 +196,7 @@ function init() {
     const data = readForm(form);
     shippingResult = data.postalCode?.trim().length >= 4
       ? calculateShipping(catalog.shipping, {
-        items: state.valid.map((l) => ({ weight: l.product.weight, quantity: l.qty })),
+        items: state.valid.map((l) => ({ weight: l.product.weight, ...dimsOf(l.product), quantity: l.qty })),
         subtotal: state.subtotal,
         country: data.country,
         postalCode: data.postalCode,
@@ -212,7 +212,7 @@ function init() {
       : !shippingResult.ok
         ? html`<div class="notice notice--error">${icon('alert')} ${shippingResult.message}</div>`
         : html`<div class="shipping-option"><span class="shipping-option__logo">${catalog.shipping.carrier || 'GLS'}</span>
-            <span class="shipping-option__info"><strong>Envío a domicilio · ${zone.name}</strong>${zone.deliveryTime ? `Entrega habitual en ${zone.deliveryTime}` : ''}</span>
+            <span class="shipping-option__info"><strong>Envío a domicilio · ${zone.name}</strong>${zone.deliveryTime ? `Entrega habitual en ${zone.deliveryTime}` : ''}${shippingResult.surcharge ? ` · Incluye ${formatPrice(shippingResult.surcharge)} por ${shippingResult.bulky === 1 ? 'pieza voluminosa' : `${shippingResult.bulky} piezas voluminosas`}` : ''}</span>
             <span class="shipping-option__price">${shippingResult.cost === 0 ? 'Gratis' : formatPrice(shippingResult.cost)}</span></div>`;
   }
 

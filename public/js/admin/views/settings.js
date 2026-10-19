@@ -57,6 +57,8 @@ const zoneBlock = (z) => html`<div class="zone" data-zone="${z.id}">
     <div class="field"><label class="field__label">Nombre de la zona</label><input class="input" name="zoneName" value="${z.name}"></div>
     <div class="field"><label class="field__label">Plazo de entrega</label><input class="input" name="deliveryTime" value="${z.deliveryTime ?? ''}" placeholder="24–72 h laborables"></div>
     <div class="field"><label class="field__label">Envío gratis desde (€)</label><input class="input" name="freeOver" inputmode="decimal" value="${z.freeOver ? centsToInput(z.freeOver) : ''}" placeholder="Vacío = nunca"></div>
+    <div class="field"><label class="field__label">Recargo por pieza voluminosa (€)</label><input class="input" name="bulkySurcharge" inputmode="decimal" value="${z.bulkySurcharge ? centsToInput(z.bulkySurcharge) : ''}" placeholder="Vacío = sin recargo">
+      <span class="field__hint">Por cada bulto voluminoso. Se cobra también con envío gratis.</span></div>
   </div>
   <div class="field"><span class="field__label">Países</span><div class="segmented">${Object.entries(COUNTRIES).map(([c, n]) =>
     raw(html`<label><input type="checkbox" name="countries" value="${c}"${z.countries?.includes(c) ? raw(' checked') : ''}><span>${n}</span></label>`))}</div></div>
@@ -77,11 +79,19 @@ const zoneBlock = (z) => html`<div class="zone" data-zone="${z.id}">
 
 function shippingForm(s) {
   return html`<form id="shipping-form" class="form-stack">
-    <div class="notice notice--info">${icon('info')} <span>Pon aquí <strong>lo que quieres cobrar al cliente</strong> por el envío. Consulta tus tarifas con tu agencia GLS. El peso de cada pieza se toma del «tamaño del paquete» de su ficha.</span></div>
+    <div class="notice notice--info">${icon('info')} <span>Pon aquí <strong>lo que quieres cobrar al cliente</strong> por el envío. Consulta tus tarifas con tu agencia GLS. El envío se cobra por el <strong>peso facturable</strong>: el mayor entre el peso real de cada pieza y su peso volumétrico (medidas de la ficha).</span></div>
     <section class="box form-stack"><h2 class="box__title">Transportista</h2>
       <div class="inline-fields">
         ${raw(input('carrier', 'Nombre del transportista', s.carrier || 'GLS'))}
         ${raw(input('trackingUrlTemplate', 'Enlace de seguimiento', s.trackingUrlTemplate, { placeholder: 'https://…{tracking}…', hint: 'Copia el enlace de seguimiento de un envío y sustituye el número por {tracking}. Vacío = solo se muestra el número.' }))}
+      </div>
+    </section>
+    <section class="box form-stack"><h2 class="box__title">Peso volumétrico y medidas</h2>
+      <p class="hint" style="margin:0">Las agencias cobran por volumen las piezas grandes y ligeras: <strong>largo × ancho × alto (cm) ÷ divisor = kg</strong>. Ejemplo con divisor 5000: un paragolpes de 180 × 60 × 40 cm cuenta como 86,4 kg aunque pese 6 kg. Pregunta a GLS qué divisor y qué medidas máximas tiene tu contrato.</p>
+      <div class="inline-fields">
+        ${raw(input('volumetricDivisor', 'Divisor del peso volumétrico', s.volumetricDivisor ?? 5000, { attrs: 'inputmode="numeric"', hint: 'Habitual: 5000 o 6000. 0 = cobrar solo por peso real.' }))}
+        ${raw(input('bulkyLength', 'Pieza voluminosa si mide más de (cm)', s.bulkyLength ?? 120, { attrs: 'inputmode="numeric"', hint: 'Lado más largo del paquete. 0 = nunca hay recargo.' }))}
+        ${raw(input('maxLength', 'Medida máxima que se envía (cm)', s.maxLength || '', { attrs: 'inputmode="numeric"', placeholder: 'Vacío = sin límite', hint: 'Si una pieza la supera, el cliente no puede pagar online y se le pide que pida presupuesto.' }))}
       </div>
     </section>
     <section class="box form-stack"><h2 class="box__title">Zonas y tarifas</h2>
@@ -110,6 +120,7 @@ function readShipping(form) {
       excludePostalPrefixes: prefixes(get('excludePostalPrefixes').value),
       deliveryTime: get('deliveryTime').value.trim(),
       freeOver: get('freeOver').value.trim() ? toCents(get('freeOver').value) ?? 0 : 0,
+      bulkySurcharge: get('bulkySurcharge').value.trim() ? toCents(get('bulkySurcharge').value) : 0,
       rates,
     };
   });
@@ -118,13 +129,26 @@ function readShipping(form) {
     if (z.active && !z.countries.length) problems.push(`La zona «${z.name}» no tiene países.`);
     if (z.active && !z.rates.length) problems.push(`La zona «${z.name}» no tiene tarifas.`);
     if (z.rates.some((r) => r.price == null)) problems.push(`Hay un precio no válido en «${z.name}».`);
+    if (z.bulkySurcharge == null) problems.push(`El recargo por pieza voluminosa de «${z.name}» no es válido.`);
   });
+  const cm = (name, max) => {
+    const raw = form[name].value.trim();
+    const n = raw ? Number(raw) : 0;
+    if (!Number.isInteger(n) || n < 0 || n > max) problems.push(`Revisa el campo «${form[name].closest('.field').querySelector('label').textContent}».`);
+    return Number.isInteger(n) ? n : 0;
+  };
+  const volumetricDivisor = cm('volumetricDivisor', 100000);
+  const bulkyLength = cm('bulkyLength', 1000);
+  const maxLength = cm('maxLength', 1000);
   return {
     problems,
     data: {
       carrier: form.carrier.value.trim() || 'GLS',
       trackingUrlTemplate: form.trackingUrlTemplate.value.trim(),
       defaultWeight: 2000,
+      volumetricDivisor,
+      bulkyLength,
+      maxLength,
       zones,
     },
   };

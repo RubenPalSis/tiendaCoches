@@ -4,7 +4,7 @@ import { logger } from '../lib/log.js';
 import { STRIPE_WEBHOOK_SECRET } from '../lib/config.js';
 import { db, FieldValue } from '../lib/firebase.js';
 import { markOrderPaid, releaseReservation } from '../orders/order-service.js';
-import { sendOrderPaidEmails } from '../email/notifications.js';
+import { sendOrderPaidEmails, sendPaymentAlertEmail } from '../email/notifications.js';
 import { constructEvent } from './client.js';
 
 export async function handleStripeEvent(event) {
@@ -26,6 +26,11 @@ export async function handleStripeEvent(event) {
       if (res.result === 'paid') {
         const snap = await db.collection('orders').doc(orderId).get();
         await sendOrderPaidEmails({ id: orderId, ...snap.data() }, session.metadata?.accessToken);
+      } else if (res.result === 'mismatch') {
+        const snap = await db.collection('orders').doc(orderId).get();
+        const detail = `Stripe ha cobrado ${((session.amount_total ?? 0) / 100).toFixed(2)} ${String(session.currency || '').toUpperCase()} `
+          + `(sesión ${session.id}, email ${session.customer_details?.email || session.customer_email || 'desconocido'}) y no coincide con el pedido ${snap.data()?.number || orderId}.`;
+        await sendPaymentAlertEmail(orderId, snap.data(), detail).catch((err) => logger.error('No se pudo avisar del pago que no coincide', err));
       }
       return res.result;
     }

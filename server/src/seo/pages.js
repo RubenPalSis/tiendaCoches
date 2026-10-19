@@ -79,6 +79,7 @@ export function productPage({ origin, store, product: p, category, shipping }) {
     ['Estado', CONDITIONS[p.condition]],
     ['Categoría', category?.name],
     ['Peso aproximado', p.weight ? `${(p.weight / 1000).toLocaleString('es-ES')} kg` : ''],
+    ['Medidas del paquete', p.length && p.width && p.height ? `${p.length} × ${p.width} × ${p.height} cm` : ''],
   ].filter(([, v]) => v);
 
   const body = html`<main id="main" class="container product-page">

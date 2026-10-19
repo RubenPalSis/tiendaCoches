@@ -358,3 +358,78 @@ test('limpieza horaria: borra pedidos sin pagar y eventos caducados (sustituye a
   assert.equal((await db.doc('orders/PAGADO00000000000001').get()).exists, true);
   assert.equal((await db.doc('stripeEvents/evt_viejo').get()).exists, false);
 });
+
+test('checkout con medidas: cobra por peso volumétrico y guarda los bultos en el pedido', async () => {
+  await db.doc('settings/shipping').set({ ...SHIPPING, volumetricDivisor: 5000, bulkyLength: 120, zones: [{ ...SHIPPING.zones[0], bulkySurcharge: 1500, rates: [...SHIPPING.zones[0].rates, { maxWeight: 60000, price: 2900 }] }] });
+  await getSettings('shipping', { fresh: true });
+  // Paragolpes: 6 kg reales, 180 × 50 × 30 cm → 54 kg volumétricos y voluminoso.
+  await addProduct('PARAGOLPES0000000001', { price: 3000, weight: 6000, length: 180, width: 50, height: 30 });
+  const res = await createCheckout(req({ items: [{ id: 'PARAGOLPES0000000001', qty: 1 }], customer: CUSTOMER, acceptTerms: true }));
+  const o = await order(res.orderId);
+  assert.equal(o.shipping.weight, 54000);
+  assert.equal(o.shipping.realWeight, 6000);
+  assert.equal(o.shipping.bulky, 1);
+  assert.equal(o.shippingCost, 2900 + 1500);
+  assert.deepEqual([o.items[0].length, o.items[0].width, o.items[0].height], [180, 50, 30]);
+  const create = stripeCalls.find((c) => c.type === 'create').params;
+  assert.equal(create.shipping_options[0].shipping_rate_data.fixed_amount.amount, 4400);
+});
+
+test('pago diferido (SEPA): la tarea horaria NO libera la reserva mientras Stripe no confirme la caducidad', async () => {
+  const { orderId } = await paidFlow(1, 1);
+  await db.doc(`orders/${orderId}`).update({ reservationExpiresAt: Timestamp.fromMillis(Date.now() - 3_600_000) });
+  const { expire, retrieve } = fakeStripe.checkout.sessions;
+  fakeStripe.checkout.sessions.expire = async () => { throw new Error('session is complete'); };
+  fakeStripe.checkout.sessions.retrieve = async (id) => ({ id, status: 'complete', payment_status: 'unpaid' });
+  try {
+    assert.equal(await releaseStaleReservations(), 0);
+    assert.equal((await product('PAGO0000000000000001')).stock, 0, 'la pieza sigue reservada');
+    assert.equal((await order(orderId)).paymentStatus, 'pending');
+  } finally {
+    Object.assign(fakeStripe.checkout.sessions, { expire, retrieve });
+  }
+});
+
+test('pago que no coincide: el pedido queda marcado para revisar', async () => {
+  const { orderId, order: o } = await paidFlow();
+  assert.equal(await handleStripeEvent(completedEvent('evt_mm', { ...o, id: orderId }, { amount_total: 1 })), 'mismatch');
+  const x = await order(orderId);
+  assert.equal(x.paymentStatus, 'pending');
+  assert.match(x.needsReview, /no coincide/);
+});
+
+test('límite antiabuso: máximo 3 pagos pendientes por IP aunque cambie el email', async () => {
+  const ids = ['IPLIM000000000000001', 'IPLIM000000000000002', 'IPLIM000000000000003', 'IPLIM000000000000004'];
+  for (const id of ids) await addProduct(id, { stock: 1 });
+  const sameIp = (body) => ({ body, headers: { host: 'tienda.test', 'cf-connecting-ip': '203.0.113.7' } });
+  for (const [i, id] of ids.slice(0, 3).entries()) {
+    await createCheckout(sameIp({ items: [{ id, qty: 1 }], customer: { ...CUSTOMER, email: `u${i}@test.com` }, acceptTerms: true }));
+  }
+  await assert.rejects(
+    createCheckout(sameIp({ items: [{ id: ids[3], qty: 1 }], customer: { ...CUSTOMER, email: 'otro@test.com' }, acceptTerms: true })),
+    (e) => e.code === 'too_many_pending',
+  );
+  const o = (await db.collection('orders').limit(1).get()).docs[0].data();
+  assert.ok(o.ipHash && !JSON.stringify(o).includes('203.0.113.7'), 'solo se guarda el hash de la IP');
+});
+
+test('consulta con número + email: no muestra la calle ni los apellidos', async () => {
+  const { lookupOrder } = await import('../../server/src/api/order.js');
+  const { orderId, order: o } = await paidFlow();
+  await handleStripeEvent(completedEvent('evt_lk', { ...o, id: orderId }));
+  const view = await lookupOrder(req({ number: o.number, email: 'ana@test.com' }));
+  assert.equal(view.shippingAddress.line1, undefined);
+  assert.equal(view.shippingAddress.postalCode, '28013');
+  assert.equal(view.customer.lastName, 'P.');
+});
+
+test('desistimiento: dos solicitudes a la vez solo registran una', async () => {
+  const { requestWithdrawal } = await import('../../server/src/api/order.js');
+  const { orderId, order: o } = await paidFlow();
+  await handleStripeEvent(completedEvent('evt_wd', { ...o, id: orderId }));
+  const body = { orderNumber: o.number, email: 'ana@test.com', message: 'No me vale' };
+  const results = await Promise.all([requestWithdrawal(req(body)), requestWithdrawal(req(body))]);
+  assert.equal(results.filter((r) => !r.alreadyRequested).length, 1);
+  const history = (await order(orderId)).history.filter((h) => h.note === 'Solicitud de desistimiento');
+  assert.equal(history.length, 1);
+});

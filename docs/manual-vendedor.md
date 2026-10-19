@@ -14,7 +14,9 @@ Consejo: en el móvil, abre esa dirección y usa «Añadir a pantalla de inicio�
    Así te encuentran en Google y en el buscador de la tienda.
 4. **Precio** (con IVA) y **unidades** (normalmente 1).
 5. **Estado:** Nuevo, Usado o Reacondicionado. Si tiene algún detalle, escríbelo en *Observaciones*.
-6. **Categoría** y **tamaño del paquete** (sirve para calcular el envío).
+6. **Categoría**, **tamaño del paquete** y, en piezas grandes (paragolpes, taloneras, alerones…),
+   las **medidas del paquete ya embalado** en cm. La agencia cobra por volumen: con las medidas el
+   cliente paga el envío real. Debajo verás cuánto «pesa» la pieza para la agencia.
 7. *(Recomendado)* Abre **Más detalles**: referencia de la pieza, marca, modelo, compatibilidad y descripción.
 8. Pulsa **Publicar pieza**. Aparece en la tienda en unos minutos.
 
@@ -48,7 +50,8 @@ un email. Organiza con él la devolución y, cuando recibas la pieza, cancela el
 
 - **Tienda:** nombre, tus datos (obligatorios por ley: aparecen en el aviso legal), teléfono,
   WhatsApp, email donde recibir los avisos.
-- **Envíos:** lo que cobras por el envío según el peso, y desde qué importe es gratis.
+- **Envíos:** lo que cobras por el envío según el peso, desde qué importe es gratis, el divisor del
+  peso volumétrico que te aplica GLS, el recargo por pieza voluminosa y la medida máxima que envías.
 - **Venta:** desactiva *Aceptar pedidos* si te vas de vacaciones (la tienda se sigue viendo, pero no se puede pagar).
 
 ## Estadísticas
