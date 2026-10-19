@@ -14,9 +14,10 @@ Consejo: en el móvil, abre esa dirección y usa «Añadir a pantalla de inicio�
    Así te encuentran en Google y en el buscador de la tienda.
 4. **Precio** (con IVA) y **unidades** (normalmente 1).
 5. **Estado:** Nuevo, Usado o Reacondicionado. Si tiene algún detalle, escríbelo en *Observaciones*.
-6. **Categoría**, **tamaño del paquete** y, en piezas grandes (paragolpes, taloneras, alerones…),
-   las **medidas del paquete ya embalado** en cm. La agencia cobra por volumen: con las medidas el
-   cliente paga el envío real. Debajo verás cuánto «pesa» la pieza para la agencia.
+6. **Categoría**, **tamaño del paquete** (peso) y **medidas del paquete** ya embalado: elige un tamaño
+   rápido (Pequeño 40×30×20, Mediano 80×40×20, Grande 120×50×30, Largo 200×30×20 para lips y taloneras,
+   Muy grande 190×60×50 para paragolpes) o **Medidas exactas**. La agencia cobra por volumen: con las
+   medidas el cliente paga el envío real. Debajo verás cuánto «pesa» la pieza para la agencia.
 7. *(Recomendado)* Abre **Más detalles**: referencia de la pieza, marca, modelo, compatibilidad y descripción.
 8. Pulsa **Publicar pieza**. Aparece en la tienda en unos minutos.
 

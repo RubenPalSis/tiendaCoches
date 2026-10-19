@@ -12,6 +12,16 @@ export const SIZE_PRESETS = [
   { id: 'XL', label: 'Muy grande (15–30 kg)', weight: 30000 },
 ];
 
+// Medidas rápidas del paquete ya embalado (cm), como SIZE_PRESETS para el peso: sirven para el peso
+// volumétrico del envío. Orientativas para las piezas de la tienda; si no encaja, «Medidas exactas».
+export const DIM_PRESETS = [
+  { id: 'S', label: 'Pequeño · 40×30×20', hint: 'tapas de espejo, colas de escape', dims: [40, 30, 20] },
+  { id: 'M', label: 'Mediano · 80×40×20', hint: 'parrillas, difusores pequeños', dims: [80, 40, 20] },
+  { id: 'L', label: 'Grande · 120×50×30', hint: 'alerones, difusores', dims: [120, 50, 30] },
+  { id: 'LONG', label: 'Largo · 200×30×20', hint: 'lips, taloneras', dims: [200, 30, 20] },
+  { id: 'XL', label: 'Muy grande · 190×60×50', hint: 'paragolpes, bodykits', dims: [190, 60, 50] },
+];
+
 // Marcas que trabaja la tienda: apartado «Marcas» de la portada y del menú, y sugerencias del panel.
 // «Universal» = piezas que valen para cualquier coche.
 export const CAR_BRANDS = ['Audi', 'BMW', 'Seat', 'Volkswagen', 'Mercedes', 'Universal'];

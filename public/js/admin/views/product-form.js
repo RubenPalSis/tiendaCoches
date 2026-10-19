@@ -4,7 +4,7 @@ import { html, raw } from '../../shared/escape.js';
 import { toCents, centsToInput } from '../../shared/money.js';
 import { icon } from '../../shared/product-card.js';
 import { productSlug, productPath } from '../../shared/slug.js';
-import { CONDITIONS, SIZE_PRESETS, LIMITS, CAR_BRANDS } from '../../shared/constants.js';
+import { CONDITIONS, SIZE_PRESETS, DIM_PRESETS, LIMITS, CAR_BRANDS } from '../../shared/constants.js';
 import { qs, qsa, on, setLoading } from '../../core/dom.js';
 import { viewHead, toast, confirmDialog, errorBox } from '../ui.js';
 import { getProduct, getSettingsDoc, listCategories, updateProductCache, removeFromProductCache, syncProductIndex } from '../data.js';
@@ -18,7 +18,7 @@ const kg = (g) => `${(g / 1000).toLocaleString('es-ES', { maximumFractionDigits:
 
 /** Aviso bajo las medidas: peso que cobrará la agencia y si el bulto es voluminoso. */
 function packageHint(item, rules) {
-  if (!item.length || !item.width || !item.height) return 'Opcional, pero muy recomendable en piezas grandes y ligeras (paragolpes, taloneras, alerones): la agencia cobra por volumen.';
+  if (!item.length || !item.width || !item.height) return 'Sin medidas el envío se cobra solo por peso. En piezas grandes y ligeras (paragolpes, taloneras, alerones) elige un tamaño: la agencia cobra por volumen.';
   const billable = billableWeight(rules, item);
   const parts = [`Se cobrará el envío como ${kg(billable)}${billable > (item.weight || 0) ? ' (por volumen)' : ''}.`];
   if (rules.maxLength > 0 && Math.max(item.length, item.width, item.height) > rules.maxLength) parts.push(`Supera la medida máxima de envío (${rules.maxLength} cm): el cliente no podrá pagarla online.`);
@@ -26,10 +26,17 @@ function packageHint(item, rules) {
   return parts.join(' ');
 }
 
+/** Opción de medidas de un producto: sin medidas, una medida rápida o «custom» (medidas exactas). */
+const dimsFor = (p) => {
+  if (!(p.length && p.width && p.height)) return 'none';
+  return DIM_PRESETS.find((s) => s.dims.join() === [p.length, p.width, p.height].join())?.id ?? 'custom';
+};
+
 const sizeFor = (weight) => SIZE_PRESETS.find((s) => s.weight === weight)?.id ?? (weight ? 'custom' : 'S');
 
 function formMarkup(p, categories, isNew) {
   const size = sizeFor(p.weight);
+  const dimsSize = dimsFor(p);
   return html`
   <form id="product-form" novalidate>
     <div class="form-layout">
@@ -90,8 +97,12 @@ function formMarkup(p, categories, isNew) {
               <input class="input" name="weightKg" inputmode="decimal" value="${p.weight ? String(p.weight / 1000).replace('.', ',') : ''}" placeholder="Peso con embalaje" aria-label="Peso exacto en kg"><span>kg</span></div>
           </div>
           <div class="field" data-field="length">
-            <span class="field__label">Medidas del paquete con embalaje <span class="opt">(opcional)</span></span>
-            <div class="inline-fields">${raw(dimInput('length', 'Largo', p.length))}${raw(dimInput('width', 'Ancho', p.width))}${raw(dimInput('height', 'Alto', p.height))}</div>
+            <span class="field__label">Medidas del paquete con embalaje (para el peso volumétrico)</span>
+            <div class="segmented">
+              <label><input type="radio" name="dimsSize" value="none"${dimsSize === 'none' ? raw(' checked') : ''}><span>Sin medidas</span></label>
+              ${DIM_PRESETS.map((s) => raw(html`<label title="${s.hint}"><input type="radio" name="dimsSize" value="${s.id}"${dimsSize === s.id ? raw(' checked') : ''}><span>${s.label} cm</span></label>`))}
+              <label><input type="radio" name="dimsSize" value="custom"${dimsSize === 'custom' ? raw(' checked') : ''}><span>Medidas exactas</span></label></div>
+            <div class="inline-fields" id="dims-wrap" style="margin-top:8px"${dimsSize === 'custom' ? '' : raw(' hidden')}>${raw(dimInput('length', 'Largo', p.length))}${raw(dimInput('width', 'Ancho', p.width))}${raw(dimInput('height', 'Alto', p.height))}</div>
             <span class="field__hint" id="package-hint"></span>
             <span class="field__error" hidden></span>
           </div>
@@ -166,13 +177,17 @@ function showErrors(form, errors) {
   if (first) form.querySelector(`[name="${first}"]`)?.focus();
 }
 
-/** Largo, ancho y alto en cm (enteros). Los tres vacíos = sin medidas. */
+/** Largo, ancho y alto en cm (enteros): de una medida rápida o de los campos de medidas exactas. */
 function readDims(d) {
+  const choice = d.get('dimsSize') || 'none';
+  if (choice === 'none') return { length: 0, width: 0, height: 0 };
+  const preset = DIM_PRESETS.find((s) => s.id === choice);
+  if (preset) return { length: preset.dims[0], width: preset.dims[1], height: preset.dims[2] };
   const raw3 = ['length', 'width', 'height'].map((k) => String(d.get(k) ?? '').trim().replace(',', '.'));
-  if (raw3.every((v) => !v)) return { length: 0, width: 0, height: 0 };
+  if (raw3.every((v) => !v)) return { length: 0, width: 0, height: 0, error: 'Escribe largo, ancho y alto en cm, o elige un tamaño.' };
   const [length, width, height] = raw3.map((v) => Math.round(parseFloat(v)));
   if (![length, width, height].every((v) => Number.isInteger(v) && v > 0 && v <= 500)) {
-    return { length: 0, width: 0, height: 0, error: 'Rellena largo, ancho y alto en cm (entre 1 y 500), o deja los tres vacíos.' };
+    return { length: 0, width: 0, height: 0, error: 'Rellena largo, ancho y alto en cm (entre 1 y 500).' };
   }
   return { length, width, height };
 }
@@ -302,6 +317,10 @@ export async function render(view, { params, firebase }) {
   drawPackageHint();
   form.addEventListener('change', (e) => {
     if (e.target.name === 'size') qs('#weight-wrap', view).hidden = e.target.value !== 'custom';
+    if (e.target.name === 'dimsSize') {
+      qs('#dims-wrap', view).hidden = e.target.value !== 'custom';
+      drawPackageHint();
+    }
   });
   form.addEventListener('input', (e) => {
     if (['length', 'width', 'height', 'weightKg', 'size'].includes(e.target.name)) drawPackageHint();
