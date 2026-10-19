@@ -11,12 +11,16 @@
 //   volumetricDivisor: 5000,           // cm³ por kg; 0 = solo peso real
 //   bulkyLength: 120,                  // cm: lado más largo a partir del cual el bulto es voluminoso; 0 = nunca
 //   maxLength: 0,                      // cm: lado más largo que se puede enviar sin presupuesto; 0 = sin límite
+//   maxGirth: 0,                       // cm: largo + perímetro (largo + 2×ancho + 2×alto) máximo por bulto; 0 = sin límite
+//   maxPackageWeight: 0,               // gramos: peso real máximo por bulto; 0 = sin límite
 //   trackingUrlTemplate: 'https://…{tracking}…',
 //   zones: [{
 //     id, name, active, countries: ['ES'],
 //     postalPrefixes: [],              // vacío = todos
 //     excludePostalPrefixes: ['07', '35', '38', '51', '52'],
 //     rates: [{ maxWeight: 2000, price: 590 }, …],   // gramos / céntimos, ordenados
+//     extraKgPrice: 122,               // céntimos por kg (o fracción) por encima del último tramo; 0 = no se envía
+//     volumetricDivisor: 3000,         // opcional: divisor propio de la zona (p. ej. Canarias, marítimo)
 //     freeOver: 9900,                  // céntimos; 0 o null = sin envío gratis (no incluye el recargo)
 //     bulkySurcharge: 1500,            // céntimos por cada bulto voluminoso
 //     deliveryTime: '24–72 h laborables',
@@ -29,6 +33,8 @@ export const DEFAULT_SHIPPING_RULES = {
   volumetricDivisor: 5000,
   bulkyLength: 120,
   maxLength: 0,
+  maxGirth: 0,
+  maxPackageWeight: 0,
   trackingUrlTemplate: '',
   zones: [
     {
@@ -81,17 +87,18 @@ export function packageDims(item) {
 }
 
 /** Peso volumétrico de un bulto en gramos (0 si no tiene medidas o está desactivado). */
-export function volumetricWeight(rules, item) {
-  const divisor = rules?.volumetricDivisor ?? DEFAULT_SHIPPING_RULES.volumetricDivisor;
+export function volumetricWeight(rules, item, zone) {
+  const divisor = zone?.volumetricDivisor || (rules?.volumetricDivisor ?? DEFAULT_SHIPPING_RULES.volumetricDivisor);
   const dims = packageDims(item);
   if (!divisor || !dims.length) return 0;
   return Math.ceil((dims[0] * dims[1] * dims[2] * 1000) / divisor);
 }
 
+const realWeight = (rules, item) => (item.weight > 0 ? item.weight : (rules?.defaultWeight ?? 2000));
+
 /** Peso que cobra la agencia por un bulto: el mayor entre el real y el volumétrico (gramos). */
-export function billableWeight(rules, item) {
-  const real = item.weight > 0 ? item.weight : (rules?.defaultWeight ?? 2000);
-  return Math.max(real, volumetricWeight(rules, item));
+export function billableWeight(rules, item, zone) {
+  return Math.max(realWeight(rules, item), volumetricWeight(rules, item, zone));
 }
 
 export function isBulky(rules, item) {
@@ -99,9 +106,36 @@ export function isBulky(rules, item) {
   return limit > 0 && (packageDims(item)[0] ?? 0) > limit;
 }
 
+/** Largo + perímetro de un bulto en cm (largo + 2 × ancho + 2 × alto); 0 si no tiene medidas. */
+export function girth(item) {
+  const [l, w, h] = packageDims(item);
+  return l ? l + 2 * w + 2 * h : 0;
+}
+
+/** Motivo por el que un bulto no se puede enviar con la tarifa (medidas o peso por bulto), o null. */
+export function packageProblem(rules, item) {
+  const maxLength = rules?.maxLength ?? 0;
+  if (maxLength > 0 && (packageDims(item)[0] ?? 0) > maxLength) return `mide más de ${maxLength} cm`;
+  const maxGirth = rules?.maxGirth ?? 0;
+  if (maxGirth > 0 && girth(item) > maxGirth) return `su largo + perímetro (${girth(item)} cm) supera ${maxGirth} cm`;
+  const maxWeight = rules?.maxPackageWeight ?? 0;
+  if (maxWeight > 0 && realWeight(rules, item) > maxWeight) return `pesa más de ${maxWeight / 1000} kg`;
+  return null;
+}
+
 /** Peso facturable total del pedido (gramos). */
-export function totalWeight(rules, items) {
-  return items.reduce((sum, it) => sum + billableWeight(rules, it) * it.quantity, 0);
+export function totalWeight(rules, items, zone) {
+  return items.reduce((sum, it) => sum + billableWeight(rules, it, zone) * it.quantity, 0);
+}
+
+/** Precio de la zona para un peso: su tramo o, por encima del último, el último + kg adicionales. */
+export function ratePrice(zone, weight) {
+  const rates = [...(zone.rates ?? [])].sort((a, b) => a.maxWeight - b.maxWeight);
+  const rate = rates.find((r) => weight <= r.maxWeight);
+  if (rate) return rate.price;
+  const last = rates.at(-1);
+  if (!last || !(zone.extraKgPrice > 0)) return null;
+  return last.price + Math.ceil((weight - last.maxWeight) / 1000) * zone.extraKgPrice;
 }
 
 /**
@@ -114,19 +148,17 @@ export function calculateShipping(rules, { items, subtotal, country, postalCode 
   if (!zone) {
     return { ok: false, reason: 'no_zone', message: 'Lo sentimos, todavía no enviamos a esta dirección.' };
   }
-  const maxLength = rules?.maxLength ?? 0;
-  if (maxLength > 0 && items.some((it) => (packageDims(it)[0] ?? 0) > maxLength)) {
+  if (items.some((it) => packageProblem(rules, it))) {
     return {
       ok: false,
       reason: 'too_big',
-      message: 'Alguna pieza supera las medidas máximas de envío. Contacta con nosotros y te daremos un presupuesto.',
+      message: 'Alguna pieza supera las medidas o el peso máximo de envío por paquete. Contacta con nosotros y te daremos un presupuesto.',
     };
   }
-  const weight = totalWeight(rules, items);
-  const realWeight = items.reduce((sum, it) => sum + (it.weight > 0 ? it.weight : (rules?.defaultWeight ?? 2000)) * it.quantity, 0);
-  const rates = [...(zone.rates ?? [])].sort((a, b) => a.maxWeight - b.maxWeight);
-  const rate = rates.find((r) => weight <= r.maxWeight);
-  if (!rate) {
+  const weight = totalWeight(rules, items, zone);
+  const real = items.reduce((sum, it) => sum + realWeight(rules, it) * it.quantity, 0);
+  const price = ratePrice(zone, weight);
+  if (price == null) {
     return {
       ok: false,
       reason: 'too_heavy',
@@ -137,7 +169,7 @@ export function calculateShipping(rules, { items, subtotal, country, postalCode 
   // El recargo por bulto voluminoso se cobra siempre: la agencia lo cobra aunque el envío sea gratis.
   const surcharge = bulky * (zone.bulkySurcharge ?? 0);
   const free = zone.freeOver > 0 && subtotal >= zone.freeOver;
-  return { ok: true, cost: (free ? 0 : rate.price) + surcharge, free, zone, weight, realWeight, bulky, surcharge };
+  return { ok: true, cost: (free ? 0 : price) + surcharge, free, zone, weight, realWeight: real, bulky, surcharge };
 }
 
 /** Importe de envío más bajo de la zona principal, para mostrar "Envío desde X". */

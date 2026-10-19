@@ -36,11 +36,16 @@ if (ratesEl) {
       ${z.deliveryTime ? `Plazo habitual de entrega: ${z.deliveryTime}.` : ''}</p>
       <table><thead><tr><th>Peso total del pedido</th><th>Precio (IVA incluido)</th></tr></thead><tbody>
       ${[...z.rates].sort((a, b) => a.maxWeight - b.maxWeight).map((r) => raw(html`<tr><td>Hasta ${(r.maxWeight / 1000).toLocaleString('es-ES')} kg</td><td>${r.price ? formatPrice(r.price) : 'Gratis'}</td></tr>`))}
+      ${z.extraKgPrice ? raw(html`<tr><td>Cada kg adicional</td><td>${formatPrice(z.extraKgPrice)}</td></tr>`) : ''}
       </tbody></table>
       ${z.freeOver ? raw(html`<p><strong>Envío gratis</strong> en pedidos desde ${formatPrice(z.freeOver)}.</p>`) : ''}
       ${z.bulkySurcharge && shipping.bulkyLength ? raw(html`<p>Las piezas cuyo paquete mide más de ${shipping.bulkyLength} cm de largo tienen un recargo de ${formatPrice(z.bulkySurcharge)} por pieza${z.freeOver ? ', también en pedidos con envío gratis' : ''}.</p>`) : ''}`).join('')
       + (shipping.volumetricDivisor ?? 5000 ? html`<p>El peso de cada pieza es el mayor entre su peso real y su <strong>peso volumétrico</strong> (largo × ancho × alto del paquete en cm ÷ ${shipping.volumetricDivisor ?? 5000}), como calculan las agencias de transporte. El precio exacto aparece en el pago antes de confirmar.</p>` : '')
       + (shipping.maxLength ? html`<p>Las piezas de más de ${shipping.maxLength} cm requieren presupuesto: contacta con nosotros.</p>` : '')
+      + (shipping.maxGirth || shipping.maxPackageWeight ? html`<p>Por paquetería se envían piezas de hasta ${[
+        shipping.maxGirth && `${shipping.maxGirth} cm de largo + perímetro (largo + 2 × ancho + 2 × alto)`,
+        shipping.maxPackageWeight && `${shipping.maxPackageWeight / 1000} kg por paquete`,
+      ].filter(Boolean).join(' y ')}. Para piezas mayores, contacta con nosotros y te daremos un presupuesto.</p>` : '')
     : html`<p class="missing-data">[pendiente: configurar tarifas de envío en el panel]</p>`;
 }
 

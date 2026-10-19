@@ -82,3 +82,46 @@ test('índice público: las medidas viajan como dims y se recuperan con dimsOf',
   assert.deepEqual(dimsOf(e), { length: 120, width: 40, height: 15 });
   assert.equal(toIndexEntry('p2', { slug: 's', name: 'n', price: 1 }).dims, undefined);
 });
+
+test('kg adicional: por encima del último tramo se suma cada kg (o fracción)', () => {
+  const zone = { ...RULES.zones[0], rates: [{ maxWeight: 15000, price: 1849 }], extraKgPrice: 122 };
+  const rules = { ...RULES, zones: [zone] };
+  const r = calculateShipping(rules, { items: [{ weight: 20500, quantity: 1 }], subtotal: 100, country: 'ES', postalCode: '28013' });
+  assert.equal(r.cost, 1849 + 6 * 122, '20,5 kg → 6 kg adicionales');
+});
+
+test('límites por paquete de GLS: largo + perímetro 300 cm y 40 kg', async () => {
+  const { girth, packageProblem } = await import('../../public/js/shared/shipping.js');
+  const rules = { ...RULES, maxLength: 0, maxGirth: 300, maxPackageWeight: 40000 };
+  assert.equal(girth({ length: 200, width: 30, height: 20 }), 300);
+  assert.equal(packageProblem(rules, { weight: 3000, length: 200, width: 30, height: 20 }), null, 'justo 300 cm sí se envía');
+  assert.match(packageProblem(rules, { weight: 6000, length: 190, width: 60, height: 50 }), /410 cm/);
+  assert.match(packageProblem(rules, { weight: 41000 }), /40 kg/);
+  const r = calculateShipping(rules, { items: [{ weight: 6000, length: 190, width: 60, height: 50, quantity: 1 }], subtotal: 1, country: 'ES', postalCode: '28013' });
+  assert.equal(r.reason, 'too_big');
+});
+
+test('divisor volumétrico propio de la zona (Canarias marítimo)', () => {
+  const zone = { ...RULES.zones[0], volumetricDivisor: 3000 };
+  assert.equal(volumetricWeight(RULES, { length: 60, width: 50, height: 30 }, zone), 30000);
+  assert.equal(volumetricWeight(RULES, { length: 60, width: 50, height: 30 }), 18000);
+});
+
+test('tarifa GLS 2026: precios con IVA y zonas por código postal', async () => {
+  const { glsShippingRules } = await import('../../public/js/admin/gls-tariff.js');
+  const gls = glsShippingRules([{ id: 'peninsula', freeOver: 15000, deliveryTime: '48 h' }]);
+  const rules = { ...RULES, bulkyLength: 120, ...gls };
+  const at = (postalCode, items, country = 'ES') => calculateShipping(rules, { items, subtotal: 5000, country, postalCode });
+  const pen = at('28013', [{ weight: 1000, quantity: 1 }]);
+  assert.equal(pen.cost, 957, '7,91 € + 21 % IVA');
+  assert.equal(pen.zone.freeOver, 15000, 'conserva el envío gratis');
+  assert.equal(pen.zone.deliveryTime, '48 h');
+  assert.equal(at('28013', [{ weight: 20000, quantity: 1 }]).cost, 1849 + 5 * 122);
+  assert.equal(at('07800', [{ weight: 1000, quantity: 1 }]).zone.id, 'baleares-menores');
+  assert.equal(at('07001', [{ weight: 1000, quantity: 1 }]).zone.id, 'baleares-mayores');
+  assert.equal(at('07001', [{ weight: 3000, quantity: 1 }]).cost, 1482 + 2 * 767);
+  assert.equal(at('35001', [{ weight: 1000, quantity: 1 }]).reason, 'no_zone', 'Canarias se carga desactivada');
+  assert.equal(at('1000-001', [{ weight: 1000, quantity: 1 }], 'PT').zone.id, 'portugal');
+  // Lip de 200 × 30 × 20 cm (3 kg): 24 kg volumétricos → 15 kg + 9 kg adicionales.
+  assert.equal(at('28013', [{ weight: 3000, length: 200, width: 30, height: 20, quantity: 1 }]).cost, 1849 + 9 * 122);
+});

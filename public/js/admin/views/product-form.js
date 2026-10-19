@@ -9,7 +9,7 @@ import { qs, qsa, on, setLoading } from '../../core/dom.js';
 import { viewHead, toast, confirmDialog, errorBox } from '../ui.js';
 import { getProduct, getSettingsDoc, listCategories, updateProductCache, removeFromProductCache, syncProductIndex } from '../data.js';
 import { uploadImage, deleteImages } from '../uploads.js';
-import { billableWeight, isBulky, DEFAULT_SHIPPING_RULES } from '../../shared/shipping.js';
+import { billableWeight, isBulky, packageProblem, DEFAULT_SHIPPING_RULES } from '../../shared/shipping.js';
 
 const dimInput = (name, label, value) => html`<div class="field"><label class="field__label" for="f-${name}">${label}</label>
   <div class="input-suffix"><input class="input" id="f-${name}" name="${name}" inputmode="numeric" maxlength="3" value="${value || ''}"><span>cm</span></div></div>`;
@@ -21,8 +21,9 @@ function packageHint(item, rules) {
   if (!item.length || !item.width || !item.height) return 'Sin medidas el envío se cobra solo por peso. En piezas grandes y ligeras (paragolpes, taloneras, alerones) elige un tamaño: la agencia cobra por volumen.';
   const billable = billableWeight(rules, item);
   const parts = [`Se cobrará el envío como ${kg(billable)}${billable > (item.weight || 0) ? ' (por volumen)' : ''}.`];
-  if (rules.maxLength > 0 && Math.max(item.length, item.width, item.height) > rules.maxLength) parts.push(`Supera la medida máxima de envío (${rules.maxLength} cm): el cliente no podrá pagarla online.`);
-  else if (isBulky(rules, item)) parts.push('Bulto voluminoso: se suma el recargo de Ajustes → Envíos.');
+  const problem = packageProblem(rules, item);
+  if (problem) parts.push(`No se puede enviar por paquetería: ${problem}. El cliente no podrá pagarla online (se le pedirá que pida presupuesto).`);
+  else if (isBulky(rules, item) && rules.zones?.some((z) => z.bulkySurcharge > 0)) parts.push('Bulto voluminoso: se suma el recargo de Ajustes → Envíos.');
   return parts.join(' ');
 }
 

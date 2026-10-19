@@ -33,6 +33,23 @@ es como factura GLS. Se busca el tramo de la zona con ese peso.
 
 Código: `public/js/shared/shipping.js` (el mismo cálculo en el navegador y en el servidor).
 
+### Tarifa del cliente: GLS Business Parcel 2026
+
+En Ajustes → Envíos, **«Cargar tarifa GLS Business Parcel 2026»** rellena el formulario (no guarda hasta
+pulsar «Guardar envíos») con la tarifa que firmó el cliente (`public/js/admin/gls-tariff.js`):
+
+- Precios por expedición **sin IVA** en la tarifa → se cargan **con el 21 % de IVA** (lo que paga el cliente).
+- Tramos de 1, 3, 5, 10 y 15 kg y **kg adicional** por encima (`extraKgPrice`; en las islas, desde 1 kg).
+- Factor volumétrico 200 kg/m³ → divisor 5000; Canarias (marítimo) 333 kg/m³ → divisor 3000 en su zona.
+- Límites por paquete: **largo + perímetro ≤ 300 cm** (`maxGirth`) y **40 kg** (`maxPackageWeight`).
+  Lo que no cabe no se puede pagar online y se pide presupuesto (p. ej. un paragolpes de 190 × 60 × 50 cm
+  suma 410 cm).
+- Zonas: Península, Baleares (Menorca/Ibiza/Formentera 077-078 y Mallorca resto de 07) y Portugal
+  activas; Canarias, Ceuta y Melilla, Andorra y Madeira/Azores se cargan **desactivadas** (aduana/DUA e
+  impuestos distintos: activar solo tras consultarlo con el gestor).
+- Se conservan el envío gratis, el plazo y el recargo por voluminoso de las zonas que ya existían.
+- Los suplementos opcionales de GLS (reembolso, recogida, SMS…) no se cobran en la tienda.
+
 ## Integración futura (preparada, NO implementada)
 
 `server/src/shipping/providers/` define una interfaz común:

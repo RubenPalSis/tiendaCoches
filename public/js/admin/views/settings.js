@@ -6,6 +6,7 @@ import { DEFAULT_SHIPPING_RULES } from '../../shared/shipping.js';
 import { qs, qsa, on, setLoading } from '../../core/dom.js';
 import { viewHead, toast, errorBox, confirmDialog } from '../ui.js';
 import { getSettingsDoc, saveSettingsDoc } from '../data.js';
+import { glsShippingRules, GLS_TARIFF_NAME } from '../gls-tariff.js';
 
 const TABS = { tienda: 'Tienda', envios: 'Envíos', venta: 'Venta', mantenimiento: 'Mantenimiento' };
 
@@ -71,6 +72,12 @@ const zoneBlock = (z) => html`<div class="zone" data-zone="${z.id}">
   <div class="field"><span class="field__label">Tarifas por peso total del pedido</span>
     <div class="rates">${(z.rates ?? []).map((r) => raw(rateRow(r)))}</div>
     <button class="btn btn--sm" type="button" data-add-rate style="justify-self:start;margin-top:4px">${icon('plus', 'icon icon--sm')} Añadir tramo</button></div>
+  <div class="inline-fields">
+    <div class="field"><label class="field__label">Cada kg adicional (€)</label><input class="input" name="extraKgPrice" inputmode="decimal" value="${z.extraKgPrice ? centsToInput(z.extraKgPrice) : ''}" placeholder="Vacío = no se envía">
+      <span class="field__hint">Por cada kg (o fracción) por encima del último tramo.</span></div>
+    <div class="field"><label class="field__label">Divisor volumétrico de esta zona</label><input class="input" name="zoneDivisor" inputmode="numeric" value="${z.volumetricDivisor || ''}" placeholder="Vacío = el general">
+      <span class="field__hint">Solo si la agencia usa otro (Canarias marítimo: 3000).</span></div>
+  </div>
   <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
     <label class="switch" style="gap:10px">Zona activa <input type="checkbox" name="zoneActive"${z.active ? raw(' checked') : ''}></label>
     <button class="btn btn--sm btn--danger" type="button" data-remove-zone>${icon('trash', 'icon icon--sm')} Eliminar zona</button>
@@ -87,10 +94,16 @@ function shippingForm(s) {
       </div>
     </section>
     <section class="box form-stack"><h2 class="box__title">Peso volumétrico y medidas</h2>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn--sm" type="button" data-load-gls>${icon('truck', 'icon icon--sm')} Cargar tarifa ${GLS_TARIFF_NAME}</button>
+        <span class="hint">Rellena zonas, precios (con IVA) y límites con tu tarifa de GLS. Revisa y pulsa «Guardar envíos».</span>
+      </div>
       <p class="hint" style="margin:0">Las agencias cobran por volumen las piezas grandes y ligeras: <strong>largo × ancho × alto (cm) ÷ divisor = kg</strong>. Ejemplo con divisor 5000: un paragolpes de 180 × 60 × 40 cm cuenta como 86,4 kg aunque pese 6 kg. Pregunta a GLS qué divisor y qué medidas máximas tiene tu contrato.</p>
       <div class="inline-fields">
         ${raw(input('volumetricDivisor', 'Divisor del peso volumétrico', s.volumetricDivisor ?? 5000, { attrs: 'inputmode="numeric"', hint: 'Habitual: 5000 o 6000. 0 = cobrar solo por peso real.' }))}
         ${raw(input('bulkyLength', 'Pieza voluminosa si mide más de (cm)', s.bulkyLength ?? 120, { attrs: 'inputmode="numeric"', hint: 'Lado más largo del paquete. 0 = nunca hay recargo.' }))}
+        ${raw(input('maxGirth', 'Largo + perímetro máximo por paquete (cm)', s.maxGirth || '', { attrs: 'inputmode="numeric"', placeholder: 'Vacío = sin límite', hint: 'Largo + 2 × ancho + 2 × alto. GLS: 300 cm.' }))}
+        ${raw(input('maxPackageWeight', 'Peso máximo por paquete (kg)', s.maxPackageWeight ? s.maxPackageWeight / 1000 : '', { attrs: 'inputmode="numeric"', placeholder: 'Vacío = sin límite', hint: 'Peso real de cada pieza. GLS: 40 kg.' }))}
         ${raw(input('maxLength', 'Medida máxima que se envía (cm)', s.maxLength || '', { attrs: 'inputmode="numeric"', placeholder: 'Vacío = sin límite', hint: 'Si una pieza la supera, el cliente no puede pagar online y se le pide que pida presupuesto.' }))}
       </div>
     </section>
@@ -121,6 +134,8 @@ function readShipping(form) {
       deliveryTime: get('deliveryTime').value.trim(),
       freeOver: get('freeOver').value.trim() ? toCents(get('freeOver').value) ?? 0 : 0,
       bulkySurcharge: get('bulkySurcharge').value.trim() ? toCents(get('bulkySurcharge').value) : 0,
+      extraKgPrice: get('extraKgPrice').value.trim() ? toCents(get('extraKgPrice').value) : 0,
+      volumetricDivisor: Number(get('zoneDivisor').value.trim() || 0),
       rates,
     };
   });
@@ -130,6 +145,8 @@ function readShipping(form) {
     if (z.active && !z.rates.length) problems.push(`La zona «${z.name}» no tiene tarifas.`);
     if (z.rates.some((r) => r.price == null)) problems.push(`Hay un precio no válido en «${z.name}».`);
     if (z.bulkySurcharge == null) problems.push(`El recargo por pieza voluminosa de «${z.name}» no es válido.`);
+    if (z.extraKgPrice == null) problems.push(`El precio por kg adicional de «${z.name}» no es válido.`);
+    if (!Number.isInteger(z.volumetricDivisor) || z.volumetricDivisor < 0) problems.push(`El divisor volumétrico de «${z.name}» no es válido.`);
   });
   const cm = (name, max) => {
     const raw = form[name].value.trim();
@@ -140,6 +157,8 @@ function readShipping(form) {
   const volumetricDivisor = cm('volumetricDivisor', 100000);
   const bulkyLength = cm('bulkyLength', 1000);
   const maxLength = cm('maxLength', 1000);
+  const maxGirth = cm('maxGirth', 2000);
+  const maxPackageWeight = cm('maxPackageWeight', 1000) * 1000;
   return {
     problems,
     data: {
@@ -149,6 +168,8 @@ function readShipping(form) {
       volumetricDivisor,
       bulkyLength,
       maxLength,
+      maxGirth,
+      maxPackageWeight,
       zones,
     },
   };
@@ -224,6 +245,18 @@ export async function render(view, { firebase }) {
       on(form, 'click', '[data-add-zone]', () => qs('#zones', form).insertAdjacentHTML('beforeend', zoneBlock({
         id: `zona-${Date.now().toString(36)}`, name: 'Nueva zona', active: false, countries: ['ES'], rates: [{ maxWeight: 2000, price: 0 }],
       })));
+      on(form, 'click', '[data-load-gls]', async () => {
+        const ok = await confirmDialog(`Cargar ${GLS_TARIFF_NAME}`,
+          'Se sustituirán las zonas y precios del formulario por los de la tarifa de GLS, con el 21 % de IVA sumado. Se mantienen el envío gratis y los plazos de las zonas que ya tienes. No se guarda hasta que pulses «Guardar envíos».',
+          { confirm: 'Cargar tarifa' });
+        if (!ok) return;
+        const gls = glsShippingRules(readShipping(form).data.zones);
+        qs('#zones', form).innerHTML = gls.zones.map((z) => zoneBlock(z)).join('');
+        form.volumetricDivisor.value = gls.volumetricDivisor;
+        form.maxGirth.value = gls.maxGirth;
+        form.maxPackageWeight.value = gls.maxPackageWeight / 1000;
+        toast('Tarifa cargada. Revisa los precios y pulsa «Guardar envíos».', { type: 'success', timeout: 6000 });
+      });
       on(form, 'click', '[data-remove-zone]', async (e, b) => {
         if (await confirmDialog('Eliminar zona', '¿Eliminar esta zona de envío?', { confirm: 'Eliminar', danger: true })) b.closest('[data-zone]').remove();
       });
