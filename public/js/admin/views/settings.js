@@ -6,7 +6,7 @@ import { DEFAULT_SHIPPING_RULES } from '../../shared/shipping.js';
 import { qs, qsa, on, setLoading } from '../../core/dom.js';
 import { viewHead, toast, errorBox, confirmDialog } from '../ui.js';
 import { getSettingsDoc, saveSettingsDoc } from '../data.js';
-import { glsShippingRules, GLS_TARIFF_NAME } from '../gls-tariff.js';
+import { glsShippingRules, GLS_TARIFF_NAME } from '../../shared/gls-tariff.js';
 
 const TABS = { tienda: 'Tienda', envios: 'Envíos', venta: 'Venta', mantenimiento: 'Mantenimiento' };
 
@@ -96,7 +96,7 @@ function shippingForm(s) {
     <section class="box form-stack"><h2 class="box__title">Peso volumétrico y medidas</h2>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
         <button class="btn btn--sm" type="button" data-load-gls>${icon('truck', 'icon icon--sm')} Cargar tarifa ${GLS_TARIFF_NAME}</button>
-        <span class="hint">Rellena zonas, precios (con IVA) y límites con tu tarifa de GLS. Revisa y pulsa «Guardar envíos».</span>
+        <span class="hint">La tienda la aplicó sola al publicarse. Este botón la vuelve a poner en el formulario (por si la has cambiado); revisa y pulsa «Guardar envíos».</span>
       </div>
       <p class="hint" style="margin:0">Las agencias cobran por volumen las piezas grandes y ligeras: <strong>largo × ancho × alto (cm) ÷ divisor = kg</strong>. Ejemplo con divisor 5000: un paragolpes de 180 × 60 × 40 cm cuenta como 86,4 kg aunque pese 6 kg. Pregunta a GLS qué divisor y qué medidas máximas tiene tu contrato.</p>
       <div class="inline-fields">
@@ -247,11 +247,13 @@ export async function render(view, { firebase }) {
       })));
       on(form, 'click', '[data-load-gls]', async () => {
         const ok = await confirmDialog(`Cargar ${GLS_TARIFF_NAME}`,
-          'Se sustituirán las zonas y precios del formulario por los de la tarifa de GLS, con el 21 % de IVA sumado. Se mantienen el envío gratis y los plazos de las zonas que ya tienes. No se guarda hasta que pulses «Guardar envíos».',
+          'Se sustituirán las zonas y precios del formulario por los de la tarifa de GLS (con el 21 % de IVA en península, Baleares y Portugal; Canarias y Andorra sin IVA y desactivadas). Se mantienen el envío gratis y los plazos de las zonas que ya tienes. No se guarda hasta que pulses «Guardar envíos».',
           { confirm: 'Cargar tarifa' });
         if (!ok) return;
-        const gls = glsShippingRules(readShipping(form).data.zones);
+        const gls = glsShippingRules(readShipping(form).data);
         qs('#zones', form).innerHTML = gls.zones.map((z) => zoneBlock(z)).join('');
+        form.carrier.value = gls.carrier;
+        form.trackingUrlTemplate.value = gls.trackingUrlTemplate;
         form.volumetricDivisor.value = gls.volumetricDivisor;
         form.maxGirth.value = gls.maxGirth;
         form.maxPackageWeight.value = gls.maxPackageWeight / 1000;

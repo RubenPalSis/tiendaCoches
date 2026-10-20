@@ -1,7 +1,7 @@
 // Acciones del panel sobre pedidos: estados, seguimiento GLS, cancelación y reembolso.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { clearFirestore } from './helpers.js';
+import { clearFirestore, skipGlsTariff } from './helpers.js';
 
 process.env.GCLOUD_PROJECT = 'demo-tienda-test2';
 process.env.BREVO_API_KEY = 'disabled';
@@ -25,6 +25,7 @@ beforeEach(async () => {
   await clearFirestore();
   refunds.length = 0;
   await db.doc('settings/shipping').set({ carrier: 'GLS', trackingUrlTemplate: 'https://gls.example/t?match={tracking}', zones: [] });
+  await skipGlsTariff(db);
   await getSettings('shipping', { fresh: true });
   await db.doc(`products/${PRODUCT_ID}`).set({ name: 'Faro', stock: 0, reserved: 0, soldCount: 1, active: true });
   await db.doc(`orders/${ORDER_ID}`).set({

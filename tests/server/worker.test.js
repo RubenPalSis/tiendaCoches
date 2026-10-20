@@ -4,7 +4,7 @@
 import { test, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { clearFirestore, clearAuth, emulatorUser } from './helpers.js';
+import { clearFirestore, clearAuth, emulatorUser, skipGlsTariff } from './helpers.js';
 
 process.env.GCLOUD_PROJECT = 'demo-tienda-worker';
 
@@ -101,6 +101,7 @@ test('panel: tras guardar un producto, syncProducts actualiza el índice públic
 test('el índice refleja el stock al reservar en el checkout (sin disparadores de Firestore)', async () => {
   setStripeForTests({ checkout: { sessions: { async create(p) { return { id: 'cs_1', url: 'https://pay.test', amount_total: p.line_items[0].price_data.unit_amount + p.shipping_options[0].shipping_rate_data.fixed_amount.amount }; } } } });
   await db.doc('settings/shipping').set({ carrier: 'GLS', defaultWeight: 1000, zones: [{ id: 'p', name: 'Península', active: true, countries: ['ES'], postalPrefixes: [], excludePostalPrefixes: [], rates: [{ maxWeight: 30000, price: 500 }], freeOver: 0 }] });
+  await skipGlsTariff(db);
   await db.doc('settings/checkout').set({ enabled: true, maxQtyPerLine: 5, termsVersion: '1' });
   const { getSettings } = await import('../../server/src/lib/settings.js');
   await Promise.all(['shipping', 'checkout'].map((n) => getSettings(n, { fresh: true })));

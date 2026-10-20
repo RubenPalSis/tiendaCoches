@@ -35,19 +35,29 @@ Código: `public/js/shared/shipping.js` (el mismo cálculo en el navegador y en 
 
 ### Tarifa del cliente: GLS Business Parcel 2026
 
-En Ajustes → Envíos, **«Cargar tarifa GLS Business Parcel 2026»** rellena el formulario (no guarda hasta
-pulsar «Guardar envíos») con la tarifa que firmó el cliente (`public/js/admin/gls-tariff.js`):
+La tarifa del documento «Tarifas paquetería 2026 TI D.pdf» está en el código
+(`public/js/shared/gls-tariff.js`) y **se aplica sola**: la primera vez que el Worker lee
+`settings/shipping` tras el despliegue (`server/src/shipping/gls-tariff.js`, llamado desde
+`getSettings`) sustituye las zonas y precios en Firestore y deja la marca
+`meta/migrations.shipping-gls-business-parcel-2026`. No vuelve a ejecutarse: lo que el vendedor cambie
+después en Ajustes → Envíos se respeta. Los envíos anteriores quedan en
+`meta/shipping-before-gls-business-parcel-2026`.
 
-- Precios por expedición **sin IVA** en la tarifa → se cargan **con el 21 % de IVA** (lo que paga el cliente).
-- Tramos de 1, 3, 5, 10 y 15 kg y **kg adicional** por encima (`extraKgPrice`; en las islas, desde 1 kg).
-- Factor volumétrico 200 kg/m³ → divisor 5000; Canarias (marítimo) 333 kg/m³ → divisor 3000 en su zona.
-- Límites por paquete: **largo + perímetro ≤ 300 cm** (`maxGirth`) y **40 kg** (`maxPackageWeight`).
-  Lo que no cabe no se puede pagar online y se pide presupuesto (p. ej. un paragolpes de 190 × 60 × 50 cm
-  suma 410 cm).
-- Zonas: Península, Baleares (Menorca/Ibiza/Formentera 077-078 y Mallorca resto de 07) y Portugal
-  activas; Canarias, Ceuta y Melilla, Andorra y Madeira/Azores se cargan **desactivadas** (aduana/DUA e
-  impuestos distintos: activar solo tras consultarlo con el gestor).
-- Se conservan el envío gratis, el plazo y el recargo por voluminoso de las zonas que ya existían.
+- Precios del documento **sin IVA** → se guardan con el IVA que paga el cliente (precio × 1,21, al
+  céntimo) en península, Baleares y Portugal. El checkout cobra el importe guardado tal cual (no suma IVA).
+- Canarias (24,52 €, solo 1 kg) y Andorra se guardan **sin IVA y desactivadas**: están fuera del
+  territorio del IVA español (aduana/DUA). Activarlas es una decisión fiscal del vendedor.
+- Ceuta y Melilla: **sin precio en el documento** → zonas desactivadas y sin tramos; aunque se activen,
+  no se puede pagar el envío. Madeira y Azores (CP 9…) no tienen zona.
+- Solo los tramos del documento (1, 3, 5, 10 y 15 kg; en Baleares y Canarias solo 1 kg). **Sin kg
+  adicional**: por encima del último tramo el cliente no puede pagar online y se le pide presupuesto.
+- Divisor volumétrico 5000; Canarias (marítimo) 3000 en su zona.
+- Límites por paquete: **largo + perímetro ≤ 300 cm** (`maxGirth`) y **40 kg** reales (`maxPackageWeight`).
+- Seguimiento: la página oficial de GLS España pide número y código postal y no admite el número en la
+  URL, así que se enlaza sin parámetros; el email y el pedido muestran el número.
+- El botón **«Cargar tarifa GLS Business Parcel 2026»** del panel vuelve a poner la tarifa en el
+  formulario (no guarda hasta pulsar «Guardar envíos»).
+- Se conservan el envío gratis, el plazo y el recargo por voluminoso de las zonas con el mismo id.
 - Los suplementos opcionales de GLS (reembolso, recogida, SMS…) no se cobran en la tienda.
 
 ## Integración futura (preparada, NO implementada)

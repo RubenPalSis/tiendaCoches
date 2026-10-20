@@ -2,7 +2,7 @@
 // No necesita emuladores: node --test tests/server/shipping.test.js
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateShipping, billableWeight, volumetricWeight, isBulky, dimsOf } from '../../public/js/shared/shipping.js';
+import { calculateShipping, billableWeight, volumetricWeight, isBulky, dimsOf, findZone } from '../../public/js/shared/shipping.js';
 import { toIndexEntry } from '../../public/js/shared/catalog.js';
 
 const RULES = {
@@ -107,21 +107,115 @@ test('divisor volumétrico propio de la zona (Canarias marítimo)', () => {
   assert.equal(volumetricWeight(RULES, { length: 60, width: 50, height: 30 }), 18000);
 });
 
-test('tarifa GLS 2026: precios con IVA y zonas por código postal', async () => {
-  const { glsShippingRules } = await import('../../public/js/admin/gls-tariff.js');
-  const gls = glsShippingRules([{ id: 'peninsula', freeOver: 15000, deliveryTime: '48 h' }]);
-  const rules = { ...RULES, bulkyLength: 120, ...gls };
-  const at = (postalCode, items, country = 'ES') => calculateShipping(rules, { items, subtotal: 5000, country, postalCode });
-  const pen = at('28013', [{ weight: 1000, quantity: 1 }]);
-  assert.equal(pen.cost, 957, '7,91 € + 21 % IVA');
-  assert.equal(pen.zone.freeOver, 15000, 'conserva el envío gratis');
-  assert.equal(pen.zone.deliveryTime, '48 h');
-  assert.equal(at('28013', [{ weight: 20000, quantity: 1 }]).cost, 1849 + 5 * 122);
-  assert.equal(at('07800', [{ weight: 1000, quantity: 1 }]).zone.id, 'baleares-menores');
-  assert.equal(at('07001', [{ weight: 1000, quantity: 1 }]).zone.id, 'baleares-mayores');
-  assert.equal(at('07001', [{ weight: 3000, quantity: 1 }]).cost, 1482 + 2 * 767);
-  assert.equal(at('35001', [{ weight: 1000, quantity: 1 }]).reason, 'no_zone', 'Canarias se carga desactivada');
-  assert.equal(at('1000-001', [{ weight: 1000, quantity: 1 }], 'PT').zone.id, 'portugal');
-  // Lip de 200 × 30 × 20 cm (3 kg): 24 kg volumétricos → 15 kg + 9 kg adicionales.
-  assert.equal(at('28013', [{ weight: 3000, length: 200, width: 30, height: 20, quantity: 1 }]).cost, 1849 + 9 * 122);
+// ---------- Tarifa GLS Business Parcel 2026 (public/js/shared/gls-tariff.js) ----------
+const { glsShippingRules, GLS_ZONES, GLS_TRACKING_URL, withIva } = await import('../../public/js/shared/gls-tariff.js');
+const GLS = glsShippingRules({ bulkyLength: 120, zones: [{ id: 'peninsula', freeOver: 15000, deliveryTime: '48 h' }] });
+const gls = (postalCode, items = [{ weight: 1000, quantity: 1 }], country = 'ES', rules = GLS) =>
+  calculateShipping(rules, { items, subtotal: 5000, country, postalCode });
+const allActive = { ...GLS, zones: GLS.zones.map((z) => ({ ...z, active: true })) };
+
+test('GLS 2026: precios del documento × 1,21 redondeados al céntimo (sin IVA doble)', () => {
+  const prices = (id) => GLS.zones.find((z) => z.id === id).rates.map((r) => r.price);
+  assert.deepEqual(prices('peninsula'), [957, 997, 1117, 1437, 1849]); // 7,91 8,24 9,23 11,88 15,28 sin IVA
+  assert.deepEqual(prices('baleares-mayores'), [1482]); // 12,25
+  assert.deepEqual(prices('baleares-menores'), [1923]); // 15,89
+  assert.deepEqual(prices('portugal'), [1026, 1071, 1198, 1542, 1984]); // 8,48 8,85 9,90 12,74 16,40
+  // Fuera del territorio del IVA: sin IVA y desactivadas.
+  assert.deepEqual(prices('canarias'), [2452]);
+  assert.deepEqual(prices('andorra'), [1939, 1939, 1939, 1939, 2544]);
+  assert.equal(withIva(1225), 1482);
+  // Aplicar la tarifa sobre unas reglas que ya la tienen no vuelve a sumar el IVA.
+  assert.deepEqual(glsShippingRules(GLS).zones, GLS.zones);
+  // El checkout cobra el precio guardado tal cual.
+  assert.equal(gls('28013').cost, 957);
+});
+
+test('GLS 2026: cada destino cae en su zona y en una sola', () => {
+  const zone = (cp, country = 'ES') => findZone(allActive, country, cp)?.id;
+  assert.equal(zone('28013'), 'peninsula');
+  assert.equal(zone('08001'), 'peninsula');
+  assert.equal(zone('07001'), 'baleares-mayores'); // Palma
+  assert.equal(zone('07760'), 'baleares-menores'); // Ciutadella
+  assert.equal(zone('07800'), 'baleares-menores'); // Ibiza
+  assert.equal(zone('07860'), 'baleares-menores'); // Formentera
+  assert.equal(zone('35001'), 'canarias');
+  assert.equal(zone('38001'), 'canarias');
+  assert.equal(zone('51001'), 'ceuta');
+  assert.equal(zone('52001'), 'melilla');
+  assert.equal(zone('1000-001', 'PT'), 'portugal');
+  assert.equal(zone('4000-001', 'PT'), 'portugal');
+  assert.equal(zone('AD500', 'AD'), 'andorra');
+  // Sin solapamientos: todos los prefijos de 2 y 3 cifras de España y Portugal encajan en una sola zona.
+  for (let i = 0; i < 1000; i += 1) {
+    const cp = String(i).padStart(3, '0');
+    const es = allActive.zones.filter((z) => findZone({ zones: [z] }, 'ES', `${cp}01`));
+    assert.equal(es.length, 1, `ES ${cp}: ${es.map((z) => z.id)}`);
+    const pt = allActive.zones.filter((z) => findZone({ zones: [z] }, 'PT', `${cp}0-001`));
+    assert.ok(pt.length <= 1, `PT ${cp}`);
+  }
+});
+
+test('GLS 2026: islas, Ceuta y Melilla nunca acaban en Península', () => {
+  for (const cp of ['07001', '07701', '07800', '35001', '38001', '51001', '52001']) {
+    const r = gls(cp);
+    assert.notEqual(r.zone?.id, 'peninsula', cp);
+  }
+  // Canarias, Ceuta, Melilla y Andorra se crean desactivadas: no se puede pagar.
+  for (const [cp, c] of [['35001', 'ES'], ['38001', 'ES'], ['51001', 'ES'], ['52001', 'ES'], ['AD500', 'AD']]) {
+    assert.equal(gls(cp, undefined, c).ok, false, cp);
+  }
+  // Madeira y Azores no tienen precio en el documento.
+  assert.equal(gls('9000-001', undefined, 'PT').reason, 'no_zone');
+});
+
+test('GLS 2026: sin precio en el documento no hay envío (ni se extrapola)', () => {
+  // Ceuta y Melilla aunque alguien las active: zona sin tramos.
+  assert.equal(gls('51001', undefined, 'ES', allActive).reason, 'no_rate');
+  assert.equal(gls('52001', undefined, 'ES', allActive).reason, 'no_rate');
+  // Baleares solo tiene el tramo de 1 kg.
+  assert.equal(gls('07001').cost, 1482);
+  assert.equal(gls('07001', [{ weight: 1500, quantity: 1 }]).reason, 'too_heavy');
+  assert.equal(gls('07800', [{ weight: 1001, quantity: 1 }]).reason, 'too_heavy');
+  // Península y Portugal: hasta 15 kg; por encima, presupuesto.
+  assert.equal(gls('28013', [{ weight: 15000, quantity: 1 }]).cost, 1849);
+  assert.equal(gls('28013', [{ weight: 15001, quantity: 1 }]).reason, 'too_heavy');
+  assert.equal(gls('1000-001', [{ weight: 16000, quantity: 1 }], 'PT').reason, 'too_heavy');
+  assert.ok(GLS.zones.every((z) => z.extraKgPrice === 0));
+});
+
+test('GLS 2026: peso facturable, divisores y límites por paquete', () => {
+  assert.equal(GLS.volumetricDivisor, 5000);
+  assert.equal(GLS.maxGirth, 300);
+  assert.equal(GLS.maxPackageWeight, 40000);
+  assert.equal(GLS.zones.find((z) => z.id === 'canarias').volumetricDivisor, 3000);
+  assert.ok(GLS.zones.filter((z) => z.id !== 'canarias').every((z) => z.volumetricDivisor === 0), 'el resto usa el general');
+  // Lip 100 × 30 × 20 (2 kg): 60.000 cm³ / 5000 = 12 kg → tramo de 15 kg.
+  const lip = { weight: 2000, length: 100, width: 30, height: 20, quantity: 1 };
+  assert.equal(gls('28013', [lip]).weight, 12000);
+  assert.equal(gls('28013', [lip]).cost, 1849);
+  // En Canarias el mismo bulto pesa 20 kg (divisor 3000).
+  assert.equal(billableWeight(GLS, lip, GLS.zones.find((z) => z.id === 'canarias')), 20000);
+  // Varios artículos: cada unidad es un bulto y se suman sus pesos facturables (no sus medidas).
+  const box = { weight: 2000, length: 30, width: 20, height: 20, quantity: 3 }; // 12.000 cm³ / 5000 = 2,4 kg > 2 kg reales
+  assert.equal(gls('28013', [box]).weight, 3 * 2400);
+  assert.equal(gls('28013', [box]).cost, 1437); // 7,2 kg → tramo de 10 kg
+  // Límites por bulto: 190 × 60 × 50 = 410 cm de largo + perímetro; 41 kg reales.
+  assert.equal(gls('28013', [{ weight: 5000, length: 190, width: 60, height: 50, quantity: 1 }]).reason, 'too_big');
+  assert.equal(gls('28013', [{ weight: 41000, quantity: 1 }]).reason, 'too_big');
+  assert.equal(gls('28013', [{ weight: 40000, length: 100, width: 50, height: 50, quantity: 1 }]).reason, 'too_heavy', '300 cm justos caben, pero 50 kg vol. no tienen precio');
+});
+
+test('GLS 2026: transportista, seguimiento oficial y datos del vendedor que se conservan', () => {
+  assert.equal(GLS.carrier, 'GLS');
+  assert.equal(GLS.trackingUrlTemplate, GLS_TRACKING_URL);
+  assert.ok(GLS_TRACKING_URL.startsWith('https://www.gls-group.com/ES/'));
+  const pen = GLS.zones.find((z) => z.id === 'peninsula');
+  assert.equal(pen.freeOver, 15000);
+  assert.equal(pen.deliveryTime, '48 h');
+  assert.equal(GLS.bulkyLength, 120);
+  const custom = glsShippingRules({ trackingUrlTemplate: 'https://mi.enlace/{tracking}', maxLength: 250, zones: [{ id: 'otra', countries: ['ES'] }] });
+  assert.equal(custom.trackingUrlTemplate, 'https://mi.enlace/{tracking}');
+  assert.equal(custom.maxLength, 250);
+  assert.deepEqual(custom.zones.map((z) => z.id), GLS_ZONES.map((z) => z.id), 'las zonas ajenas se quitan (no se solapan)');
+  assert.equal(new Set(custom.zones.map((z) => z.id)).size, custom.zones.length, 'sin zonas duplicadas');
 });

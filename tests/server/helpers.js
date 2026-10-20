@@ -37,3 +37,11 @@ export async function emulatorUser(email, { verified = true, claims } = {}) {
 export async function clearAuth() {
   await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/emulator/v1/projects/${project()}/accounts`, { method: 'DELETE' });
 }
+
+/**
+ * Marca la tarifa GLS 2026 como ya aplicada, para las pruebas que usan sus propias reglas de envío
+ * (si no, la primera lectura de settings/shipping las sustituiría por la tarifa).
+ */
+export async function skipGlsTariff(db) {
+  await db.doc('meta/migrations').set({ 'shipping-gls-business-parcel-2026': true }, { merge: true });
+}

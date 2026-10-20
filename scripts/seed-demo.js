@@ -7,6 +7,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { glsShippingRules, GLS_TARIFF_ID } from '../public/js/shared/gls-tariff.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -66,20 +67,9 @@ async function main() {
     email: 'tienda@demo.test', phone: '600 000 000', whatsapp: '600000000', usedWarranty: '1 año',
     notificationEmail: 'tienda@demo.test', emailFrom: 'tienda@demo.test',
   });
-  // Tarifas de EJEMPLO para probar en local (las reales se configuran en el panel).
-  batch.set(db.doc('settings/shipping'), {
-    carrier: 'GLS',
-    defaultWeight: 2000,
-    trackingUrlTemplate: '',
-    zones: [
-      { id: 'peninsula', name: 'Península', active: true, countries: ['ES'], postalPrefixes: [], excludePostalPrefixes: ['07', '35', '38', '51', '52'],
-        rates: [{ maxWeight: 2000, price: 595 }, { maxWeight: 5000, price: 795 }, { maxWeight: 10000, price: 995 }, { maxWeight: 20000, price: 1495 }, { maxWeight: 30000, price: 1895 }],
-        freeOver: 15000, deliveryTime: '24–72 h laborables' },
-      { id: 'portugal', name: 'Portugal', active: true, countries: ['PT'], postalPrefixes: [], excludePostalPrefixes: [],
-        rates: [{ maxWeight: 5000, price: 1295 }, { maxWeight: 20000, price: 2295 }, { maxWeight: 30000, price: 2995 }],
-        freeOver: 0, deliveryTime: '48–96 h laborables' },
-    ],
-  });
+  // Envíos: la tarifa GLS Business Parcel 2026 real, marcada como ya aplicada (como en producción).
+  batch.set(db.doc('settings/shipping'), glsShippingRules({}));
+  batch.set(db.doc('meta/migrations'), { [`shipping-${GLS_TARIFF_ID}`]: now }, { merge: true });
   batch.set(db.doc('settings/checkout'), { enabled: true, closedMessage: 'La tienda está cerrada temporalmente.', maxQtyPerLine: 10, termsVersion: '1' });
   await batch.commit();
 

@@ -3,7 +3,7 @@
 // Uso: npm test, o con emuladores ya en marcha: node --test tests/server/*.test.js
 import { test, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { clearFirestore } from './helpers.js';
+import { clearFirestore, skipGlsTariff } from './helpers.js';
 
 process.env.GCLOUD_PROJECT = 'demo-tienda-test';
 process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret';
@@ -73,6 +73,7 @@ beforeEach(async () => {
   await clearDb();
   stripeCalls.length = 0;
   await db.doc('settings/shipping').set(SHIPPING);
+  await skipGlsTariff(db);
   await db.doc('settings/checkout').set({ enabled: true, maxQtyPerLine: 10, termsVersion: '3', closedMessage: 'Cerrado' });
   await getSettings('shipping', { fresh: true });
   await getSettings('checkout', { fresh: true });

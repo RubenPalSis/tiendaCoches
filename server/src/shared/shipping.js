@@ -148,6 +148,10 @@ export function calculateShipping(rules, { items, subtotal, country, postalCode 
   if (!zone) {
     return { ok: false, reason: 'no_zone', message: 'Lo sentimos, todavía no enviamos a esta dirección.' };
   }
+  // Zona sin precios (p. ej. Ceuta y Melilla, sin tarifa): nunca se cobra un envío inventado.
+  if (!zone.rates?.length) {
+    return { ok: false, reason: 'no_rate', message: 'Lo sentimos, todavía no enviamos a esta dirección.' };
+  }
   if (items.some((it) => packageProblem(rules, it))) {
     return {
       ok: false,

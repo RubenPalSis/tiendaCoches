@@ -36,7 +36,8 @@ if (ratesEl) {
       ${z.deliveryTime ? `Plazo habitual de entrega: ${z.deliveryTime}.` : ''}</p>
       <table><thead><tr><th>Peso total del pedido</th><th>Precio (IVA incluido)</th></tr></thead><tbody>
       ${[...z.rates].sort((a, b) => a.maxWeight - b.maxWeight).map((r) => raw(html`<tr><td>Hasta ${(r.maxWeight / 1000).toLocaleString('es-ES')} kg</td><td>${r.price ? formatPrice(r.price) : 'Gratis'}</td></tr>`))}
-      ${z.extraKgPrice ? raw(html`<tr><td>Cada kg adicional</td><td>${formatPrice(z.extraKgPrice)}</td></tr>`) : ''}
+      ${z.extraKgPrice ? raw(html`<tr><td>Cada kg adicional</td><td>${formatPrice(z.extraKgPrice)}</td></tr>`)
+    : z.rates.length ? raw(html`<tr><td>Más de ${(Math.max(...z.rates.map((r) => r.maxWeight)) / 1000).toLocaleString('es-ES')} kg</td><td>Pide presupuesto</td></tr>`) : ''}
       </tbody></table>
       ${z.freeOver ? raw(html`<p><strong>Envío gratis</strong> en pedidos desde ${formatPrice(z.freeOver)}.</p>`) : ''}
       ${z.bulkySurcharge && shipping.bulkyLength ? raw(html`<p>Las piezas cuyo paquete mide más de ${shipping.bulkyLength} cm de largo tienen un recargo de ${formatPrice(z.bulkySurcharge)} por pieza${z.freeOver ? ', también en pedidos con envío gratis' : ''}.</p>`) : ''}`).join('')
