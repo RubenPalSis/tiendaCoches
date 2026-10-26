@@ -39,9 +39,9 @@ export async function clearAuth() {
 }
 
 /**
- * Marca la tarifa GLS 2026 como ya aplicada, para las pruebas que usan sus propias reglas de envío
+ * Marca la tarifa GLS 2026 (y su kg adicional) como ya aplicada, para las pruebas que usan sus propias reglas de envío
  * (si no, la primera lectura de settings/shipping las sustituiría por la tarifa).
  */
 export async function skipGlsTariff(db) {
-  await db.doc('meta/migrations').set({ 'shipping-gls-business-parcel-2026': true }, { merge: true });
+  await db.doc('meta/migrations').set({ 'shipping-gls-business-parcel-2026': true, 'shipping-gls-business-parcel-2026-kg-adicional': true }, { merge: true });
 }

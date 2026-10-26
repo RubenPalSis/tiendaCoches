@@ -168,19 +168,25 @@ test('GLS 2026: islas, Ceuta y Melilla nunca acaban en Península', () => {
   assert.equal(gls('9000-001', undefined, 'PT').reason, 'no_zone');
 });
 
-test('GLS 2026: sin precio en el documento no hay envío (ni se extrapola)', () => {
+test('GLS 2026: kg adicional por encima del último tramo; sin tramos no hay envío', () => {
   // Ceuta y Melilla aunque alguien las active: zona sin tramos.
   assert.equal(gls('51001', undefined, 'ES', allActive).reason, 'no_rate');
   assert.equal(gls('52001', undefined, 'ES', allActive).reason, 'no_rate');
-  // Baleares solo tiene el tramo de 1 kg.
+  // kg adicional con IVA: 1,01 € → 1,22 € (península), 6,34 → 7,67 (Mallorca), 7,36 → 8,91, 1,08 → 1,31 (Portugal).
+  const extra = (id) => GLS.zones.find((z) => z.id === id).extraKgPrice;
+  assert.deepEqual(['peninsula', 'baleares-mayores', 'baleares-menores', 'portugal'].map(extra), [122, 767, 891, 131]);
+  assert.equal(extra('canarias'), 1364, 'sin IVA');
+  assert.equal(extra('ceuta'), 0);
+  // Baleares solo tiene el tramo de 1 kg; por encima, kg adicional (o fracción).
   assert.equal(gls('07001').cost, 1482);
-  assert.equal(gls('07001', [{ weight: 1500, quantity: 1 }]).reason, 'too_heavy');
-  assert.equal(gls('07800', [{ weight: 1001, quantity: 1 }]).reason, 'too_heavy');
-  // Península y Portugal: hasta 15 kg; por encima, presupuesto.
+  assert.equal(gls('07001', [{ weight: 1500, quantity: 1 }]).cost, 1482 + 767);
+  assert.equal(gls('07800', [{ weight: 1001, quantity: 1 }]).cost, 1923 + 891);
+  // Península y Portugal: tramos hasta 15 kg y kg adicional.
   assert.equal(gls('28013', [{ weight: 15000, quantity: 1 }]).cost, 1849);
-  assert.equal(gls('28013', [{ weight: 15001, quantity: 1 }]).reason, 'too_heavy');
-  assert.equal(gls('1000-001', [{ weight: 16000, quantity: 1 }], 'PT').reason, 'too_heavy');
-  assert.ok(GLS.zones.every((z) => z.extraKgPrice === 0));
+  assert.equal(gls('28013', [{ weight: 15001, quantity: 1 }]).cost, 1849 + 122);
+  assert.equal(gls('1000-001', [{ weight: 16000, quantity: 1 }], 'PT').cost, 1984 + 131);
+  // Paragolpes con medidas «Grande» (120 × 50 × 30, 6 kg): 36 kg volumétricos → 21 kg adicionales.
+  assert.equal(gls('28013', [{ weight: 6000, length: 120, width: 50, height: 30, quantity: 1 }]).cost, 1849 + 21 * 122);
 });
 
 test('GLS 2026: peso facturable, divisores y límites por paquete', () => {
@@ -202,7 +208,7 @@ test('GLS 2026: peso facturable, divisores y límites por paquete', () => {
   // Límites por bulto: 190 × 60 × 50 = 410 cm de largo + perímetro; 41 kg reales.
   assert.equal(gls('28013', [{ weight: 5000, length: 190, width: 60, height: 50, quantity: 1 }]).reason, 'too_big');
   assert.equal(gls('28013', [{ weight: 41000, quantity: 1 }]).reason, 'too_big');
-  assert.equal(gls('28013', [{ weight: 40000, length: 100, width: 50, height: 50, quantity: 1 }]).reason, 'too_heavy', '300 cm justos caben, pero 50 kg vol. no tienen precio');
+  assert.equal(gls('28013', [{ weight: 40000, length: 100, width: 50, height: 50, quantity: 1 }]).cost, 1849 + 35 * 122, '300 cm justos caben: 50 kg vol.');
 });
 
 test('GLS 2026: transportista, seguimiento oficial y datos del vendedor que se conservan', () => {

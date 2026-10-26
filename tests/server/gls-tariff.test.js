@@ -5,8 +5,8 @@ import { clearFirestore } from './helpers.js';
 
 process.env.GCLOUD_PROJECT = 'demo-tienda-test-gls';
 
-const { db } = await import('../../server/src/lib/firebase.js');
-const { applyGlsTariff, GLS_MIGRATION } = await import('../../server/src/shipping/gls-tariff.js');
+const { db, FieldValue } = await import('../../server/src/lib/firebase.js');
+const { applyGlsTariff, GLS_MIGRATION, GLS_EXTRA_KG_MIGRATION } = await import('../../server/src/shipping/gls-tariff.js');
 const { getSettings } = await import('../../server/src/lib/settings.js');
 const { calculateShipping } = await import('../../server/src/shared/shipping.js');
 const { GLS_TRACKING_URL } = await import('../../server/src/shared/gls-tariff.js');
@@ -45,7 +45,31 @@ test('sustituye zonas y precios por la tarifa y conserva lo demás', async () =>
 
   assert.deepEqual((await db.doc('meta/shipping-before-gls-business-parcel-2026').get()).data(), OLD, 'copia de seguridad');
   assert.deepEqual((await db.doc('settings/store').get()).data(), { name: 'Mi tienda' }, 'otros ajustes intactos');
-  assert.ok((await db.doc('meta/migrations').get()).data()[GLS_MIGRATION]);
+  assert.equal(pen.extraKgPrice, 122);
+  const marks = (await db.doc('meta/migrations').get()).data();
+  assert.ok(marks[GLS_MIGRATION] && marks[GLS_EXTRA_KG_MIGRATION]);
+});
+
+test('tienda con la tarifa ya aplicada sin kg adicional: lo añade una vez y respeta al vendedor', async () => {
+  await applyGlsTariff();
+  const before = await shippingDoc();
+  // Como quedó la tarifa antes del kg adicional; el vendedor puso el suyo en Portugal.
+  const zones = before.zones.map((z) => ({ ...z, extraKgPrice: z.id === 'portugal' ? 200 : 0 }));
+  await db.doc('settings/shipping').set({ ...before, zones });
+  await db.doc('meta/migrations').update({ [GLS_EXTRA_KG_MIGRATION]: FieldValue.delete() });
+
+  assert.deepEqual(await applyGlsTariff(), { applied: true, extraKg: true });
+  const s = await shippingDoc();
+  const extra = (id) => s.zones.find((z) => z.id === id).extraKgPrice;
+  assert.equal(extra('peninsula'), 122);
+  assert.equal(extra('baleares-mayores'), 767);
+  assert.equal(extra('portugal'), 200, 'precio del vendedor');
+  assert.equal(extra('ceuta'), 0, 'zona sin tramos');
+  assert.deepEqual(s.zones.map((z) => z.rates), before.zones.map((z) => z.rates), 'tramos intactos');
+
+  await db.doc('settings/shipping').set({ ...s, zones: s.zones.map((z) => ({ ...z, extraKgPrice: 0 })) });
+  assert.deepEqual(await applyGlsTariff(), { skipped: true });
+  assert.equal((await shippingDoc()).zones[0].extraKgPrice, 0, 'si el vendedor lo quita después, no vuelve');
 });
 
 test('una sola vez: no duplica zonas ni pisa lo que cambie después el vendedor', async () => {

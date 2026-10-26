@@ -49,8 +49,12 @@ después en Ajustes → Envíos se respeta. Los envíos anteriores quedan en
   territorio del IVA español (aduana/DUA). Activarlas es una decisión fiscal del vendedor.
 - Ceuta y Melilla: **sin precio en el documento** → zonas desactivadas y sin tramos; aunque se activen,
   no se puede pagar el envío. Madeira y Azores (CP 9…) no tienen zona.
-- Solo los tramos del documento (1, 3, 5, 10 y 15 kg; en Baleares y Canarias solo 1 kg). **Sin kg
-  adicional**: por encima del último tramo el cliente no puede pagar online y se le pide presupuesto.
+- Tramos del documento (1, 3, 5, 10 y 15 kg; en Baleares y Canarias solo 1 kg) y, por encima del
+  último, **kg adicional** por cada kg o fracción (`extraKgPrice`, sin IVA: península 1,01 €, Mallorca
+  6,34 €, Menorca/Ibiza/Formentera 7,36 €, Portugal 1,08 €, Canarias 13,64 €, Andorra 2,06 €). Sin él,
+  los paragolpes (más de 15 kg por peso volumétrico) no se podían pagar online. Una segunda marca,
+  `meta/migrations.shipping-gls-business-parcel-2026-kg-adicional`, lo añadió una vez a la tienda que
+  ya tenía la tarifa, sin tocar las zonas en las que el vendedor ya hubiera puesto un precio.
 - Divisor volumétrico 5000; Canarias (marítimo) 3000 en su zona.
 - Límites por paquete: **largo + perímetro ≤ 300 cm** (`maxGirth`) y **40 kg** reales (`maxPackageWeight`).
 - Seguimiento: la página oficial de GLS España pide número y código postal y no admite el número en la
