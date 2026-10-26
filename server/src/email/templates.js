@@ -42,7 +42,7 @@ function addressBlock(order) {
   const a = order.shippingAddress;
   return `<p style="font-size:14px;line-height:1.5;margin:0"><strong>Dirección de envío</strong><br>
 ${esc(order.customer.firstName)} ${esc(order.customer.lastName)}<br>${esc(a.line1)}${a.line2 ? `, ${esc(a.line2)}` : ''}<br>
-${esc(a.postalCode)} ${esc(a.city)} (${esc(a.province)}), ${esc(COUNTRIES[a.country] ?? a.country)}<br>Tel. ${esc(order.customer.phone)}</p>`;
+${esc(a.postalCode)} ${esc(a.city)} (${esc(a.province)}), ${esc(COUNTRIES[a.country] ?? a.country)}<br>Tel. ${esc(order.customer.phone)}${order.customer.dni ? ` · NIF ${esc(order.customer.dni)}` : ''}</p>`;
 }
 
 export function orderConfirmationEmail(store, order, orderUrl) {

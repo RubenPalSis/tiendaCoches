@@ -48,7 +48,7 @@ export async function createCheckout(req) {
       origin,
       ipHash,
       items: cart.items,
-      customer: { firstName: v.firstName, lastName: v.lastName, email: v.email, phone: v.phone },
+      customer: { firstName: v.firstName, lastName: v.lastName, email: v.email, phone: v.phone, dni: v.dni },
       address: {
         line1: v.line1, line2: v.line2, postalCode: v.postalCode, city: v.city,
         province: v.province, country: v.country, notes: v.notes,

@@ -101,6 +101,7 @@ function markup(o) {
           <div><dt>Nombre</dt><dd>${o.customer.firstName} ${o.customer.lastName}</dd></div>
           <div><dt>Email</dt><dd><a href="mailto:${o.customer.email}">${o.customer.email}</a></dd></div>
           <div><dt>Teléfono</dt><dd><a href="tel:${o.customer.phone}">${o.customer.phone}</a></dd></div>
+          ${o.customer.dni ? raw(html`<div><dt>DNI / NIE / CIF</dt><dd>${o.customer.dni}</dd></div>`) : ''}
         </dl>
       </section>
       <section class="box">

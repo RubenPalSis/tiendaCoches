@@ -75,7 +75,8 @@ function formMarkup(countries) {
       <div class="form-grid">
         ${raw(field('firstName', 'Nombre', { autocomplete: 'given-name', cls: 'col-3' }))}
         ${raw(field('lastName', 'Apellidos', { autocomplete: 'family-name', cls: 'col-3' }))}
-        ${raw(field('line1', 'Dirección', { autocomplete: 'address-line1', cls: 'col-6', attrs: 'placeholder="Calle, número"' }))}
+        ${raw(field('dni', 'DNI / NIE / CIF', { cls: 'col-2', attrs: 'maxlength="12" autocapitalize="characters" spellcheck="false" placeholder="12345678Z"', hint: 'Para la factura. Empresas: CIF.' }))}
+        ${raw(field('line1', 'Dirección', { autocomplete: 'address-line1', cls: 'col-4', attrs: 'placeholder="Calle, número"' }))}
         ${raw(field('line2', 'Piso, puerta, escalera…', { autocomplete: 'address-line2', cls: 'col-6', optional: true }))}
         ${raw(field('postalCode', 'Código postal', { autocomplete: 'postal-code', cls: 'col-2', attrs: 'inputmode="numeric" maxlength="10"' }))}
         ${raw(field('city', 'Ciudad', { autocomplete: 'address-level2', cls: 'col-4' }))}

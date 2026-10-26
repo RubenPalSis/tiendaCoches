@@ -120,6 +120,7 @@ await page.fill('#f-email', 'comprador@test.com');
 await page.fill('#f-phone', '600123123');
 await page.fill('#f-firstName', 'Laura');
 await page.fill('#f-lastName', 'García López');
+await page.fill('#f-dni', '12345678Z');
 await page.fill('#f-line1', 'Calle Alcalá 100');
 await page.fill('#f-postalCode', '35001');
 await page.waitForSelector('#shipping-option .notice--error');

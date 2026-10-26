@@ -109,7 +109,7 @@ test('el índice refleja el stock al reservar en el checkout (sin disparadores d
   await (await import('../../server/src/catalog/catalog-index.js')).rebuildIndex();
   const res = await call('/api/checkout', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ acceptTerms: true, items: [{ id: 'P2', qty: 1 }], customer: { firstName: 'Ana', lastName: 'Pérez', email: 'ana@x.es', phone: '600111222', line1: 'Calle 1', postalCode: '28013', city: 'Madrid', province: '', country: 'ES' } }),
+    body: JSON.stringify({ acceptTerms: true, items: [{ id: 'P2', qty: 1 }], customer: { firstName: 'Ana', lastName: 'Pérez', email: 'ana@x.es', phone: '600111222', dni: '12345678Z', line1: 'Calle 1', postalCode: '28013', city: 'Madrid', province: '', country: 'ES' } }),
   });
   assert.equal(res.status, 200, await res.clone().text());
   const index = await (await call('/api/catalog')).json();

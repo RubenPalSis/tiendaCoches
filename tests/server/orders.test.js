@@ -26,7 +26,7 @@ const SHIPPING = {
 };
 
 const CUSTOMER = {
-  firstName: 'Ana', lastName: 'Pérez', email: 'ANA@test.com', phone: '600111222',
+  firstName: 'Ana', lastName: 'Pérez', email: 'ANA@test.com', phone: '600111222', dni: '12345678Z',
   line1: 'Calle Mayor 1', line2: '', postalCode: '28013', city: 'Madrid', province: '', country: 'ES', notes: '',
 };
 
