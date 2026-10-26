@@ -8,17 +8,22 @@
 // los productos). Canarias y Andorra están fuera del territorio del IVA español (exportación, aduana):
 // se guardan sin IVA y DESACTIVADAS; activarlas es una decisión fiscal del vendedor.
 //
-// Tramos del documento y, por encima del último, «kg adicional» por cada kg o fracción (sin él, piezas
-// grandes como los paragolpes, que pasan de 15 kg por peso volumétrico, no se podían pagar online).
+// Tramos del documento y, por encima del último, «kg adicional» proporcional a los kg que pasan del
+// tramo (sin él, piezas grandes como los paragolpes, que pasan de 15 kg por peso volumétrico, no se
+// podían pagar online). Así lo calcula GLS: 190×30×30 → 34,2 kg → 15,28 € + 19,2 × 1,01 € + IVA.
 // Ceuta y Melilla no tienen precio en el documento: se crean desactivadas y sin tramos.
 //
-// Condiciones aplicadas: divisor volumétrico 5000 (terrestre) y 3000 en Canarias (marítimo),
-// largo + perímetro máximo 300 cm y 40 kg por paquete.
+// Condiciones aplicadas: divisor volumétrico 5000 (terrestre) y 3000 en Canarias (marítimo) y 40 kg
+// por paquete. Sin límite de largo + perímetro: GLS cotiza paragolpes de 190×30×30 (310 cm), así que
+// el de 300 cm del documento dejaba fuera piezas que sí envían.
 
 export const GLS_TARIFF_ID = 'gls-business-parcel-2026';
 export const GLS_TARIFF_NAME = 'GLS Business Parcel 2026';
 // Segunda migración: añade el kg adicional a las tiendas que ya tenían la tarifa aplicada sin él.
 export const GLS_EXTRA_KG_ID = `${GLS_TARIFF_ID}-kg-adicional`;
+// Tercera: quita el límite de largo + perímetro de 300 cm a las tiendas que lo tenían de la tarifa.
+export const GLS_NO_GIRTH_ID = `${GLS_TARIFF_ID}-sin-perimetro`;
+const OLD_GLS_GIRTH = 300;
 // Página oficial de seguimiento de GLS España. Pide número y código postal y no admite el número en la
 // URL, así que se enlaza tal cual (el email y la página del pedido muestran el número aparte).
 export const GLS_TRACKING_URL = 'https://www.gls-group.com/ES/es/recibir-paquetes/seguimiento-envio/';
@@ -58,7 +63,7 @@ export function glsShippingRules(current = {}) {
     trackingUrlTemplate: rest.trackingUrlTemplate || GLS_TRACKING_URL,
     defaultWeight: rest.defaultWeight ?? 2000,
     volumetricDivisor: 5000,
-    maxGirth: 300,
+    maxGirth: 0,
     maxPackageWeight: 40000,
     zones: GLS_ZONES.map(({ vat, ...z }) => {
       const prev = byId.get(z.id) ?? {};
@@ -91,4 +96,9 @@ export function withGlsExtraKg(rules = {}) {
       return { ...z, extraKgPrice: withIva(t.extraKgPrice, t.vat) };
     }),
   };
+}
+
+/** Quita el límite de largo + perímetro si es el de 300 cm de la tarifa; respeta el que ponga el vendedor. */
+export function withoutGlsGirth(rules = {}) {
+  return rules.maxGirth === OLD_GLS_GIRTH ? { ...rules, maxGirth: 0 } : rules;
 }

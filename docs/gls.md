@@ -50,13 +50,18 @@ después en Ajustes → Envíos se respeta. Los envíos anteriores quedan en
 - Ceuta y Melilla: **sin precio en el documento** → zonas desactivadas y sin tramos; aunque se activen,
   no se puede pagar el envío. Madeira y Azores (CP 9…) no tienen zona.
 - Tramos del documento (1, 3, 5, 10 y 15 kg; en Baleares y Canarias solo 1 kg) y, por encima del
-  último, **kg adicional** por cada kg o fracción (`extraKgPrice`, sin IVA: península 1,01 €, Mallorca
+  último, **kg adicional** proporcional a los kg que pasan del tramo (`extraKgPrice`, sin IVA: península 1,01 €, Mallorca
   6,34 €, Menorca/Ibiza/Formentera 7,36 €, Portugal 1,08 €, Canarias 13,64 €, Andorra 2,06 €). Sin él,
   los paragolpes (más de 15 kg por peso volumétrico) no se podían pagar online. Una segunda marca,
   `meta/migrations.shipping-gls-business-parcel-2026-kg-adicional`, lo añadió una vez a la tienda que
   ya tenía la tarifa, sin tocar las zonas en las que el vendedor ya hubiera puesto un precio.
+  Ejemplo de GLS: paragolpes 190×30×30 cm → 0,171 m³ × 200 = 34,2 kg → 15,28 € + 19,2 × 1,01 € =
+  34,67 € + IVA. La tienda cobra 41,91 € (18,49 € + 19,2 × 1,22 €; el IVA va redondeado en cada precio).
 - Divisor volumétrico 5000; Canarias (marítimo) 3000 en su zona.
-- Límites por paquete: **largo + perímetro ≤ 300 cm** (`maxGirth`) y **40 kg** reales (`maxPackageWeight`).
+- Límite por paquete: **40 kg** reales (`maxPackageWeight`). **Sin límite de largo + perímetro**
+  (`maxGirth` = 0): el documento dice 300 cm, pero GLS cotiza los paragolpes de 190×30×30 (310 cm).
+  La marca `meta/migrations.shipping-gls-business-parcel-2026-sin-perimetro` quitó una vez el 300 a la
+  tienda que ya lo tenía; si el vendedor pone otro límite en Ajustes → Envíos, se respeta.
 - Seguimiento: la página oficial de GLS España pide número y código postal y no admite el número en la
   URL, así que se enlaza sin parámetros; el email y el pedido muestran el número.
 - El botón **«Cargar tarifa GLS Business Parcel 2026»** del panel vuelve a poner la tarifa en el

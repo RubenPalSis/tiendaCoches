@@ -19,7 +19,7 @@
 //     postalPrefixes: [],              // vacío = todos
 //     excludePostalPrefixes: ['07', '35', '38', '51', '52'],
 //     rates: [{ maxWeight: 2000, price: 590 }, …],   // gramos / céntimos, ordenados
-//     extraKgPrice: 122,               // céntimos por kg (o fracción) por encima del último tramo; 0 = no se envía
+//     extraKgPrice: 122,               // céntimos por kg por encima del último tramo, proporcional (19,2 kg → 19,2 ×); 0 = no se envía
 //     volumetricDivisor: 3000,         // opcional: divisor propio de la zona (p. ej. Canarias, marítimo)
 //     freeOver: 9900,                  // céntimos; 0 o null = sin envío gratis (no incluye el recargo)
 //     bulkySurcharge: 1500,            // céntimos por cada bulto voluminoso
@@ -128,14 +128,18 @@ export function totalWeight(rules, items, zone) {
   return items.reduce((sum, it) => sum + billableWeight(rules, it, zone) * it.quantity, 0);
 }
 
-/** Precio de la zona para un peso: su tramo o, por encima del último, el último + kg adicionales. */
+/**
+ * Precio de la zona para un peso: su tramo o, por encima del último, el último + los kg adicionales
+ * exactos (34,2 kg con tramo hasta 15 → 15 kg + 19,2 × kg adicional), redondeado al céntimo, como lo
+ * calcula GLS.
+ */
 export function ratePrice(zone, weight) {
   const rates = [...(zone.rates ?? [])].sort((a, b) => a.maxWeight - b.maxWeight);
   const rate = rates.find((r) => weight <= r.maxWeight);
   if (rate) return rate.price;
   const last = rates.at(-1);
   if (!last || !(zone.extraKgPrice > 0)) return null;
-  return last.price + Math.ceil((weight - last.maxWeight) / 1000) * zone.extraKgPrice;
+  return last.price + Math.round(((weight - last.maxWeight) * zone.extraKgPrice) / 1000);
 }
 
 /**

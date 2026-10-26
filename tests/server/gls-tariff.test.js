@@ -6,7 +6,7 @@ import { clearFirestore } from './helpers.js';
 process.env.GCLOUD_PROJECT = 'demo-tienda-test-gls';
 
 const { db, FieldValue } = await import('../../server/src/lib/firebase.js');
-const { applyGlsTariff, GLS_MIGRATION, GLS_EXTRA_KG_MIGRATION } = await import('../../server/src/shipping/gls-tariff.js');
+const { applyGlsTariff, GLS_MIGRATION, GLS_EXTRA_KG_MIGRATION, GLS_NO_GIRTH_MIGRATION } = await import('../../server/src/shipping/gls-tariff.js');
 const { getSettings } = await import('../../server/src/lib/settings.js');
 const { calculateShipping } = await import('../../server/src/shared/shipping.js');
 const { GLS_TRACKING_URL } = await import('../../server/src/shared/gls-tariff.js');
@@ -32,7 +32,7 @@ test('sustituye zonas y precios por la tarifa y conserva lo demás', async () =>
   assert.equal(s.carrier, 'GLS');
   assert.equal(s.trackingUrlTemplate, GLS_TRACKING_URL);
   assert.equal(s.volumetricDivisor, 5000);
-  assert.equal(s.maxGirth, 300);
+  assert.equal(s.maxGirth, 0);
   assert.equal(s.maxPackageWeight, 40000);
   assert.equal(s.bulkyLength, 130, 'ajuste que no es de la tarifa');
   assert.deepEqual(s.zones.map((z) => z.id), ['peninsula', 'baleares-mayores', 'baleares-menores', 'canarias', 'ceuta', 'melilla', 'portugal', 'andorra']);
@@ -47,7 +47,7 @@ test('sustituye zonas y precios por la tarifa y conserva lo demás', async () =>
   assert.deepEqual((await db.doc('settings/store').get()).data(), { name: 'Mi tienda' }, 'otros ajustes intactos');
   assert.equal(pen.extraKgPrice, 122);
   const marks = (await db.doc('meta/migrations').get()).data();
-  assert.ok(marks[GLS_MIGRATION] && marks[GLS_EXTRA_KG_MIGRATION]);
+  assert.ok(marks[GLS_MIGRATION] && marks[GLS_EXTRA_KG_MIGRATION] && marks[GLS_NO_GIRTH_MIGRATION]);
 });
 
 test('tienda con la tarifa ya aplicada sin kg adicional: lo añade una vez y respeta al vendedor', async () => {
@@ -58,7 +58,7 @@ test('tienda con la tarifa ya aplicada sin kg adicional: lo añade una vez y res
   await db.doc('settings/shipping').set({ ...before, zones });
   await db.doc('meta/migrations').update({ [GLS_EXTRA_KG_MIGRATION]: FieldValue.delete() });
 
-  assert.deepEqual(await applyGlsTariff(), { applied: true, extraKg: true });
+  assert.deepEqual(await applyGlsTariff(), { applied: true, fixes: [GLS_EXTRA_KG_MIGRATION] });
   const s = await shippingDoc();
   const extra = (id) => s.zones.find((z) => z.id === id).extraKgPrice;
   assert.equal(extra('peninsula'), 122);
@@ -70,6 +70,23 @@ test('tienda con la tarifa ya aplicada sin kg adicional: lo añade una vez y res
   await db.doc('settings/shipping').set({ ...s, zones: s.zones.map((z) => ({ ...z, extraKgPrice: 0 })) });
   assert.deepEqual(await applyGlsTariff(), { skipped: true });
   assert.equal((await shippingDoc()).zones[0].extraKgPrice, 0, 'si el vendedor lo quita después, no vuelve');
+});
+
+test('tienda con el límite de 300 cm de la tarifa: lo quita una vez; respeta otro límite del vendedor', async () => {
+  await applyGlsTariff();
+  const before = await shippingDoc();
+  await db.doc('settings/shipping').set({ ...before, maxGirth: 300 });
+  await db.doc('meta/migrations').update({ [GLS_NO_GIRTH_MIGRATION]: FieldValue.delete() });
+
+  assert.deepEqual(await applyGlsTariff(), { applied: true, fixes: [GLS_NO_GIRTH_MIGRATION] });
+  assert.deepEqual(await shippingDoc(), before, 'solo cambia maxGirth');
+  const at = (rules) => calculateShipping(rules, { items: [{ weight: 8000, length: 190, width: 30, height: 30, quantity: 1 }], subtotal: 1, country: 'ES', postalCode: '28013' });
+  assert.equal(at(await shippingDoc()).cost, 4191, 'el paragolpes de 190 × 30 × 30 ya se puede pagar');
+
+  await db.doc('settings/shipping').set({ ...before, maxGirth: 250 });
+  await db.doc('meta/migrations').update({ [GLS_NO_GIRTH_MIGRATION]: FieldValue.delete() });
+  await applyGlsTariff();
+  assert.equal((await shippingDoc()).maxGirth, 250, 'límite propio del vendedor');
 });
 
 test('una sola vez: no duplica zonas ni pisa lo que cambie después el vendedor', async () => {

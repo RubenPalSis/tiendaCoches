@@ -74,7 +74,7 @@ const zoneBlock = (z) => html`<div class="zone" data-zone="${z.id}">
     <button class="btn btn--sm" type="button" data-add-rate style="justify-self:start;margin-top:4px">${icon('plus', 'icon icon--sm')} Añadir tramo</button></div>
   <div class="inline-fields">
     <div class="field"><label class="field__label">Cada kg adicional (€)</label><input class="input" name="extraKgPrice" inputmode="decimal" value="${z.extraKgPrice ? centsToInput(z.extraKgPrice) : ''}" placeholder="Vacío = no se envía">
-      <span class="field__hint">Por cada kg (o fracción) por encima del último tramo.</span></div>
+      <span class="field__hint">Por cada kg por encima del último tramo, proporcional (19,2 kg de más → 19,2 × este precio).</span></div>
     <div class="field"><label class="field__label">Divisor volumétrico de esta zona</label><input class="input" name="zoneDivisor" inputmode="numeric" value="${z.volumetricDivisor || ''}" placeholder="Vacío = el general">
       <span class="field__hint">Solo si la agencia usa otro (Canarias marítimo: 3000).</span></div>
   </div>
@@ -102,7 +102,7 @@ function shippingForm(s) {
       <div class="inline-fields">
         ${raw(input('volumetricDivisor', 'Divisor del peso volumétrico', s.volumetricDivisor ?? 5000, { attrs: 'inputmode="numeric"', hint: 'Habitual: 5000 o 6000. 0 = cobrar solo por peso real.' }))}
         ${raw(input('bulkyLength', 'Pieza voluminosa si mide más de (cm)', s.bulkyLength ?? 120, { attrs: 'inputmode="numeric"', hint: 'Lado más largo del paquete. 0 = nunca hay recargo.' }))}
-        ${raw(input('maxGirth', 'Largo + perímetro máximo por paquete (cm)', s.maxGirth || '', { attrs: 'inputmode="numeric"', placeholder: 'Vacío = sin límite', hint: 'Largo + 2 × ancho + 2 × alto. GLS: 300 cm.' }))}
+        ${raw(input('maxGirth', 'Largo + perímetro máximo por paquete (cm)', s.maxGirth || '', { attrs: 'inputmode="numeric"', placeholder: 'Vacío = sin límite', hint: 'Largo + 2 × ancho + 2 × alto.' }))}
         ${raw(input('maxPackageWeight', 'Peso máximo por paquete (kg)', s.maxPackageWeight ? s.maxPackageWeight / 1000 : '', { attrs: 'inputmode="numeric"', placeholder: 'Vacío = sin límite', hint: 'Peso real de cada pieza. GLS: 40 kg.' }))}
         ${raw(input('maxLength', 'Medida máxima que se envía (cm)', s.maxLength || '', { attrs: 'inputmode="numeric"', placeholder: 'Vacío = sin límite', hint: 'Si una pieza la supera, el cliente no puede pagar online y se le pide que pida presupuesto.' }))}
       </div>
@@ -255,7 +255,7 @@ export async function render(view, { firebase }) {
         form.carrier.value = gls.carrier;
         form.trackingUrlTemplate.value = gls.trackingUrlTemplate;
         form.volumetricDivisor.value = gls.volumetricDivisor;
-        form.maxGirth.value = gls.maxGirth;
+        form.maxGirth.value = gls.maxGirth || '';
         form.maxPackageWeight.value = gls.maxPackageWeight / 1000;
         toast('Tarifa cargada. Revisa los precios y pulsa «Guardar envíos».', { type: 'success', timeout: 6000 });
       });

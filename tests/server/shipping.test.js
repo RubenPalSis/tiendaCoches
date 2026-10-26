@@ -83,11 +83,11 @@ test('índice público: las medidas viajan como dims y se recuperan con dimsOf',
   assert.equal(toIndexEntry('p2', { slug: 's', name: 'n', price: 1 }).dims, undefined);
 });
 
-test('kg adicional: por encima del último tramo se suma cada kg (o fracción)', () => {
+test('kg adicional: por encima del último tramo se cobran los kg exactos', () => {
   const zone = { ...RULES.zones[0], rates: [{ maxWeight: 15000, price: 1849 }], extraKgPrice: 122 };
   const rules = { ...RULES, zones: [zone] };
   const r = calculateShipping(rules, { items: [{ weight: 20500, quantity: 1 }], subtotal: 100, country: 'ES', postalCode: '28013' });
-  assert.equal(r.cost, 1849 + 6 * 122, '20,5 kg → 6 kg adicionales');
+  assert.equal(r.cost, 1849 + 671, '20,5 kg → 5,5 × 1,22 € = 6,71 €');
 });
 
 test('límites por paquete de GLS: largo + perímetro 300 cm y 40 kg', async () => {
@@ -177,21 +177,26 @@ test('GLS 2026: kg adicional por encima del último tramo; sin tramos no hay env
   assert.deepEqual(['peninsula', 'baleares-mayores', 'baleares-menores', 'portugal'].map(extra), [122, 767, 891, 131]);
   assert.equal(extra('canarias'), 1364, 'sin IVA');
   assert.equal(extra('ceuta'), 0);
-  // Baleares solo tiene el tramo de 1 kg; por encima, kg adicional (o fracción).
+  // Baleares solo tiene el tramo de 1 kg; por encima, kg adicional proporcional.
   assert.equal(gls('07001').cost, 1482);
-  assert.equal(gls('07001', [{ weight: 1500, quantity: 1 }]).cost, 1482 + 767);
-  assert.equal(gls('07800', [{ weight: 1001, quantity: 1 }]).cost, 1923 + 891);
+  assert.equal(gls('07001', [{ weight: 1500, quantity: 1 }]).cost, 1482 + 384);
+  assert.equal(gls('07800', [{ weight: 2000, quantity: 1 }]).cost, 1923 + 891);
   // Península y Portugal: tramos hasta 15 kg y kg adicional.
   assert.equal(gls('28013', [{ weight: 15000, quantity: 1 }]).cost, 1849);
-  assert.equal(gls('28013', [{ weight: 15001, quantity: 1 }]).cost, 1849 + 122);
+  assert.equal(gls('28013', [{ weight: 15100, quantity: 1 }]).cost, 1849 + 12);
   assert.equal(gls('1000-001', [{ weight: 16000, quantity: 1 }], 'PT').cost, 1984 + 131);
   // Paragolpes con medidas «Grande» (120 × 50 × 30, 6 kg): 36 kg volumétricos → 21 kg adicionales.
   assert.equal(gls('28013', [{ weight: 6000, length: 120, width: 50, height: 30, quantity: 1 }]).cost, 1849 + 21 * 122);
+  // Ejemplo de GLS: paragolpes 190 × 30 × 30 → 34,2 kg → 15,28 € + 19,2 × 1,01 € = 34,67 € + IVA (41,95 €).
+  // Aquí 18,49 € + 19,2 × 1,22 € = 41,91 € (el IVA va redondeado en cada precio guardado).
+  const bumper = gls('28013', [{ weight: 8000, length: 190, width: 30, height: 30, quantity: 1 }]);
+  assert.equal(bumper.weight, 34200);
+  assert.equal(bumper.cost, 4191);
 });
 
 test('GLS 2026: peso facturable, divisores y límites por paquete', () => {
   assert.equal(GLS.volumetricDivisor, 5000);
-  assert.equal(GLS.maxGirth, 300);
+  assert.equal(GLS.maxGirth, 0, 'sin límite de largo + perímetro');
   assert.equal(GLS.maxPackageWeight, 40000);
   assert.equal(GLS.zones.find((z) => z.id === 'canarias').volumetricDivisor, 3000);
   assert.ok(GLS.zones.filter((z) => z.id !== 'canarias').every((z) => z.volumetricDivisor === 0), 'el resto usa el general');
@@ -205,10 +210,11 @@ test('GLS 2026: peso facturable, divisores y límites por paquete', () => {
   const box = { weight: 2000, length: 30, width: 20, height: 20, quantity: 3 }; // 12.000 cm³ / 5000 = 2,4 kg > 2 kg reales
   assert.equal(gls('28013', [box]).weight, 3 * 2400);
   assert.equal(gls('28013', [box]).cost, 1437); // 7,2 kg → tramo de 10 kg
-  // Límites por bulto: 190 × 60 × 50 = 410 cm de largo + perímetro; 41 kg reales.
-  assert.equal(gls('28013', [{ weight: 5000, length: 190, width: 60, height: 50, quantity: 1 }]).reason, 'too_big');
+  // Sin límite de largo + perímetro: 190 × 60 × 50 (410 cm) se cobra por sus 114 kg volumétricos.
+  assert.equal(gls('28013', [{ weight: 5000, length: 190, width: 60, height: 50, quantity: 1 }]).cost, 1849 + 99 * 122);
+  // Límite por bulto: 40 kg reales.
   assert.equal(gls('28013', [{ weight: 41000, quantity: 1 }]).reason, 'too_big');
-  assert.equal(gls('28013', [{ weight: 40000, length: 100, width: 50, height: 50, quantity: 1 }]).cost, 1849 + 35 * 122, '300 cm justos caben: 50 kg vol.');
+  assert.equal(gls('28013', [{ weight: 40000, length: 100, width: 50, height: 50, quantity: 1 }]).cost, 1849 + 35 * 122, '40 kg justos: 50 kg vol.');
 });
 
 test('GLS 2026: transportista, seguimiento oficial y datos del vendedor que se conservan', () => {
