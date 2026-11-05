@@ -38,8 +38,8 @@ function storeForm(s) {
         ${raw(input('whatsapp', 'WhatsApp', s.whatsapp, { type: 'tel', hint: 'Muestra el botón de WhatsApp en la tienda. Déjalo vacío para ocultarlo.' }))}
       </div>
       <div class="inline-fields">
-        ${raw(input('notificationEmail', 'Email donde recibir avisos de pedidos', s.notificationEmail, { type: 'email' }))}
-        ${raw(input('emailFrom', 'Remitente de los emails a clientes', s.emailFrom, { type: 'email', hint: 'Debe ser una dirección autorizada en tu proveedor de email (SMTP).' }))}
+        ${raw(input('notificationEmail', 'Email donde recibir avisos de pedidos', s.notificationEmail, { type: 'email', hint: 'En la tienda publicada los avisos van a la dirección fijada en el servidor (wrangler.toml → ORDER_ALERT_EMAILS).' }))}
+        ${raw(input('emailFrom', 'Remitente de los emails a clientes', s.emailFrom, { type: 'email', hint: 'Vacío = la cuenta de Gmail de la tienda. Otra dirección solo si está añadida en Gmail → «Enviar como».' }))}
       </div>
     </section>
     <div class="save-bar"><button class="btn btn--primary" type="submit">${icon('check')} Guardar</button></div>

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { clearFirestore, skipGlsTariff } from './helpers.js';
 
 process.env.GCLOUD_PROJECT = 'demo-tienda-test2';
-process.env.BREVO_API_KEY = 'disabled';
+process.env.GMAIL_APP_PASSWORD = 'disabled';
 process.env.ADMIN_EMAILS = 'admin@x.es';
 
 const { db, Timestamp } = await import('../../server/src/lib/firebase.js');

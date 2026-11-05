@@ -7,7 +7,7 @@ import { clearFirestore, skipGlsTariff } from './helpers.js';
 
 process.env.GCLOUD_PROJECT = 'demo-tienda-test';
 process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret';
-process.env.BREVO_API_KEY = 'disabled';
+process.env.GMAIL_APP_PASSWORD = 'disabled';
 process.env.SITE_URL = 'https://tienda.test';
 
 const { db, Timestamp } = await import('../../server/src/lib/firebase.js');
@@ -16,6 +16,8 @@ const { createCheckout, cancelPendingCheckout } = await import('../../server/src
 const { createPendingOrder, releaseReservation, markOrderPaid, releaseStaleReservations, hashToken } = await import('../../server/src/orders/order-service.js');
 const { handleStripeEvent, stripeWebhook } = await import('../../server/src/stripe/webhook.js');
 const { getSettings } = await import('../../server/src/lib/settings.js');
+const { setMailTransportForTests } = await import('../../server/src/email/mailer.js');
+const { sendOrderPaidEmails } = await import('../../server/src/email/notifications.js');
 
 const SHIPPING = {
   carrier: 'GLS', defaultWeight: 2000, trackingUrlTemplate: 'https://gls.test/track?n={tracking}',
@@ -433,4 +435,25 @@ test('desistimiento: dos solicitudes a la vez solo registran una', async () => {
   assert.equal(results.filter((r) => !r.alreadyRequested).length, 1);
   const history = (await order(orderId)).history.filter((h) => h.note === 'Solicitud de desistimiento');
   assert.equal(history.length, 1);
+});
+
+test('pedido pagado: email solo al comprador y a ORDER_ALERT_EMAILS (ignora el email de avisos del panel)', async () => {
+  process.env.ORDER_ALERT_EMAILS = ' Vendedor@gmail.com, vendedor@gmail.com';
+  await db.doc('settings/store').set({ name: 'Tienda', email: 'hola@tienda.test', notificationEmail: 'avisos@tienda.test', emailFrom: 'tienda@gmail.com' });
+  await getSettings('store', { fresh: true });
+  const sent = [];
+  setMailTransportForTests((m) => { sent.push(m); });
+  try {
+    await db.doc('orders/o1').set({ number: '2026-00001' });
+    await sendOrderPaidEmails({
+      id: 'o1', number: '2026-00001', total: 2595, subtotal: 2000, shippingCost: 595, siteOrigin: 'https://tienda.test',
+      customer: { ...CUSTOMER, email: 'ana@test.com' }, shippingAddress: CUSTOMER,
+      items: [{ name: 'Lip', reference: 'R1', quantity: 1, unitPrice: 2000 }], shipping: { carrier: 'GLS' },
+    }, 'token');
+    assert.deepEqual(sent.map((m) => m.to).sort(), ['ana@test.com', 'vendedor@gmail.com']);
+    assert.ok(sent.every((m) => m.from === 'tienda@gmail.com'));
+  } finally {
+    setMailTransportForTests(undefined);
+    delete process.env.ORDER_ALERT_EMAILS;
+  }
 });

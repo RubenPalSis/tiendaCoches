@@ -12,7 +12,8 @@
     "test:e2e": "node tests/e2e/shop-flow.js && node tests/e2e/admin-flow.js && node tests/e2e/admin-roles.js",
     "test:responsive": "node tests/e2e/screens.js / /catalogo /carrito /checkout /pedido /contacto /legal/condiciones /categoria/lip",
     "deploy": "npm run shared && wrangler deploy",
-    "deploy:rules": "firebase deploy --only firestore"
+    "deploy:rules": "firebase deploy --only firestore",
+    "secrets": "node scripts/upload-secrets.js"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",

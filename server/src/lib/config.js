@@ -23,7 +23,7 @@ export const TIMEZONE = 'Europe/Madrid';
 // Secretos (`npx wrangler secret put NOMBRE`; en local, archivo .dev.vars que git ignora).
 export const STRIPE_SECRET_KEY = param('STRIPE_SECRET_KEY');
 export const STRIPE_WEBHOOK_SECRET = param('STRIPE_WEBHOOK_SECRET');
-export const BREVO_API_KEY = param('BREVO_API_KEY'); // vacío o "disabled" = no enviar emails
+export const GMAIL_APP_PASSWORD = param('GMAIL_APP_PASSWORD'); // contraseña de aplicación; vacío o "disabled" = no enviar emails
 export const CLOUDINARY_API_SECRET = param('CLOUDINARY_API_SECRET');
 // JSON de la cuenta de servicio de Firebase (acceso del servidor a Firestore y Authentication).
 export const FIREBASE_SERVICE_ACCOUNT = param('FIREBASE_SERVICE_ACCOUNT');
@@ -31,6 +31,8 @@ export const FIREBASE_SERVICE_ACCOUNT = param('FIREBASE_SERVICE_ACCOUNT');
 // Variables públicas (wrangler.toml → [vars]).
 export const SITE_URL = param('SITE_URL'); // https://www.mitienda.es; vacío = origen de la petición permitido
 export const ADMIN_EMAILS = param('ADMIN_EMAILS');
+export const GMAIL_USER = param('GMAIL_USER'); // cuenta de Gmail que envía los emails
+export const ORDER_ALERT_EMAILS = param('ORDER_ALERT_EMAILS'); // únicos destinatarios de los avisos al vendedor (separados por comas)
 export const FIREBASE_PROJECT_ID = param('FIREBASE_PROJECT_ID');
 export const FIREBASE_WEB_CONFIG = param('FIREBASE_WEB_CONFIG'); // JSON público del SDK web (apiKey, authDomain…)
 export const CLOUDINARY_CLOUD_NAME = param('CLOUDINARY_CLOUD_NAME');

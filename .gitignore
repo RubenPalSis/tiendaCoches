@@ -10,6 +10,7 @@ emulator-data/
 !.dev.vars.example
 *.local
 .env
+secretos.env
 service-account*.json
 *-firebase-adminsdk-*.json
 
@@ -35,3 +36,6 @@ public/media/
 # Ajustes personales de Claude Code
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+
+# Configuración local de VS Code
+.vscode/

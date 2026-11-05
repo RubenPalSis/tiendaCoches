@@ -22,10 +22,12 @@ crons = ["0 * * * *"]
 enabled = true
 
 # Valores públicos. Los secretos NO van aquí: `npx wrangler secret put NOMBRE`
-# (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, BREVO_API_KEY, CLOUDINARY_API_SECRET, FIREBASE_SERVICE_ACCOUNT).
+# (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, GMAIL_APP_PASSWORD, CLOUDINARY_API_SECRET, FIREBASE_SERVICE_ACCOUNT).
 [vars]
 SITE_URL = ""                 # p. ej. "https://www.mitienda.es" (vacío = dominio de la petición)
-ADMIN_EMAILS = "mivotunning@gmail.com,ruben.palacio@zierzoware.com" # emails del panel separados por comas
+ADMIN_EMAILS = "mivotunning@gmail.com" # emails del panel separados por comas
+GMAIL_USER = "mivotunning@gmail.com" # cuenta que envía los emails (su contraseña de aplicación es el secreto GMAIL_APP_PASSWORD)
+ORDER_ALERT_EMAILS = "mivotunning@gmail.com" # ÚNICOS destinatarios de los avisos de pedidos, devoluciones y cobros (el panel no los cambia)
 FIREBASE_PROJECT_ID = "mivotunning-f973f"
 # Configuración web de Firebase (es pública): Configuración del proyecto → Tus apps → Web
 FIREBASE_WEB_CONFIG = '{"apiKey":"AIzaSyDBb8lXbRT44PZTtQqa5VWrhyhRHXCuiww","authDomain":"mivotunning-f973f.firebaseapp.com","projectId":"mivotunning-f973f","appId":"1:1021948872243:web:cbe8f8c04ededaf88c0546","messagingSenderId":"1021948872243"}'
@@ -42,6 +44,8 @@ triggers = { crons = [] }
 [env.dev.vars]
 SITE_URL = ""
 ADMIN_EMAILS = "admin@demo.test,otro-admin@demo.test,sin-verificar@demo.test"
+ORDER_ALERT_EMAILS = "" # vacío = email de avisos del panel
+GMAIL_USER = "" # en local no se envían emails salvo que lo pongas en .dev.vars
 FIREBASE_PROJECT_ID = "demo-tienda"
 FIREBASE_WEB_CONFIG = ""
 FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080"

@@ -1,12 +1,23 @@
 import { db } from '../lib/firebase.js';
 import { getSettings } from '../lib/settings.js';
+import { ORDER_ALERT_EMAILS } from '../lib/config.js';
 import { sendMail } from './mailer.js';
 import {
   orderConfirmationEmail, orderShippedEmail, orderCancelledEmail,
   sellerNewOrderEmail, withdrawalReceiptEmail, sellerWithdrawalEmail, sellerPaymentAlertEmail,
 } from './templates.js';
 
-const sellerEmail = (store) => store.notificationEmail || store.email;
+/**
+ * Destinatarios de los avisos al vendedor. Si wrangler.toml fija ORDER_ALERT_EMAILS, van SOLO ahí
+ * (nadie puede desviarlos desde el panel); si está vacío (desarrollo), al email de avisos del panel.
+ */
+const sellerRecipients = (store) => {
+  const fixed = [...new Set(ORDER_ALERT_EMAILS.value().split(',').map((e) => e.trim().toLowerCase()).filter(Boolean))];
+  if (fixed.length) return fixed;
+  const fallback = store.notificationEmail || store.email;
+  return fallback ? [fallback] : [];
+};
+const sendToSeller = (store, mail) => Promise.all(sellerRecipients(store).map((to) => sendMail({ to, ...mail })));
 
 async function logEmail(orderId, key, ok) {
   await db.collection('orders').doc(orderId).update({ [`emails.${key}`]: ok ? 'sent' : 'not_sent' }).catch(() => {});
@@ -21,7 +32,7 @@ export async function sendOrderPaidEmails(order, accessToken) {
   const toSeller = sellerNewOrderEmail(store, order, order.siteOrigin ? `${order.siteOrigin}/admin/#/pedidos/${order.id}` : '');
   const [a] = await Promise.all([
     sendMail({ to: order.customer.email, ...toCustomer }),
-    sendMail({ to: sellerEmail(store), ...toSeller }),
+    sendToSeller(store, toSeller),
   ]);
   await logEmail(order.id, 'confirmation', a);
 }
@@ -44,7 +55,7 @@ export async function sendWithdrawalEmails(order, message, requestedAt) {
   const store = await getSettings('store');
   await Promise.all([
     sendMail({ to: order.customer.email, ...withdrawalReceiptEmail(store, order, message, requestedAt) }),
-    sendMail({ to: sellerEmail(store), ...sellerWithdrawalEmail(store, order, message) }),
+    sendToSeller(store, sellerWithdrawalEmail(store, order, message)),
   ]);
 }
 
@@ -52,5 +63,5 @@ export async function sendWithdrawalEmails(order, message, requestedAt) {
 export async function sendPaymentAlertEmail(orderId, order, detail) {
   const store = await getSettings('store');
   const adminUrl = order?.siteOrigin ? `${order.siteOrigin}/admin/#/pedidos/${orderId}` : '';
-  await sendMail({ to: sellerEmail(store), ...sellerPaymentAlertEmail(store, order, detail, adminUrl) });
+  await sendToSeller(store, sellerPaymentAlertEmail(store, order, detail, adminUrl));
 }

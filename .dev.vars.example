@@ -2,4 +2,6 @@
 # Sin ellos la tienda funciona en local, pero sin pagos ni emails.
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
-BREVO_API_KEY=disabled
+# Para probar el envío real desde Gmail:
+# GMAIL_USER=mivotunning@gmail.com
+GMAIL_APP_PASSWORD=disabled

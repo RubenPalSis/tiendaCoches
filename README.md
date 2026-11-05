@@ -2,7 +2,7 @@
 
 Tienda online sin WordPress/Shopify y **sin planes de pago**: HTML + CSS + JavaScript servidos por
 Cloudflare Workers (web + servidor), Firebase en plan gratuito Spark (Authentication + Firestore),
-fotos en Cloudinary, emails con Brevo, pagos con Stripe Checkout y envíos con GLS (gestión manual,
+fotos en Cloudinary, emails desde Gmail (SMTP), pagos con Stripe Checkout y envíos con GLS (gestión manual,
 preparada para automatizar).
 
 - **Compradores:** sin registro. Catálogo con búsqueda instantánea, filtros, ficha de producto,
@@ -14,7 +14,7 @@ preparada para automatizar).
 
 | Documento | Para quién |
 |---|---|
-| [docs/puesta-en-produccion.md](docs/puesta-en-produccion.md) | Pasos exactos para publicar la tienda en planes gratuitos (Cloudflare, Firebase Spark, Cloudinary, Brevo, Stripe, dominio) |
+| [docs/puesta-en-produccion.md](docs/puesta-en-produccion.md) | Pasos exactos para publicar la tienda en planes gratuitos (Cloudflare, Firebase Spark, Cloudinary, Gmail, Stripe, dominio) |
 | [docs/manual-vendedor.md](docs/manual-vendedor.md) | Manual sencillo del panel para el cliente |
 | [docs/arquitectura.md](docs/arquitectura.md) | Arquitectura, modelo de datos, seguridad, costes y decisiones técnicas |
 | [docs/gls.md](docs/gls.md) | Envíos GLS: flujo manual actual y plan de integración futura |
@@ -50,7 +50,7 @@ npm run seed         # (otra terminal) catálogo de demo/ + ajustes de prueba + 
 No necesita ninguna cuenta: Firebase en emuladores (proyecto `demo-tienda`), el Worker con
 `wrangler dev --env dev` (configuración en `wrangler.toml` → `[env.dev]`) y las fotos en un almacén
 simulado en lugar de Cloudinary. Sin claves de Stripe el checkout muestra «Los pagos todavía no están
-configurados» (esperado). Para probar Stripe o Brevo en local, crea `.dev.vars` (git lo ignora) con
+configurados» (esperado). Para probar Stripe o el envío de emails en local, crea `.dev.vars` (git lo ignora) con
 `STRIPE_SECRET_KEY=…`, etc.
 
 Tarjetas de prueba de Stripe (modo test; cualquier fecha futura y CVC):
@@ -95,4 +95,4 @@ tests/                  rules/, server/, e2e/
 2. Nombre, datos legales, contacto, envíos: desde el panel → Ajustes (se guardan en Firestore).
 3. Productos y categorías: desde el panel.
 4. Nuevo proyecto Firebase (Spark), Worker de Cloudflare (`name` en `wrangler.toml`), Cloudinary,
-   Brevo y la cuenta Stripe del cliente (ver puesta en producción).
+   la cuenta de Gmail que envía los emails y la cuenta Stripe del cliente (ver puesta en producción).

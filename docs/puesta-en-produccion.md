@@ -10,10 +10,11 @@ o el cliente. El resto se hace con comandos en la terminal de este proyecto.
 | Cloudflare Workers | Web + servidor (pagos, emails, páginas para Google, panel, tarea horaria) | 100.000 peticiones/día al servidor; archivos de la web sin límite |
 | Firebase **Spark** | Login del panel + base de datos (Firestore) | 50.000 lecturas y 20.000 escrituras/día, 1 GB |
 | Cloudinary | Fotos de las piezas | 25 créditos/mes (1 crédito ≈ 1 GB de tráfico o de espacio) |
-| Brevo | Emails de pedidos | 300 emails/día |
+| Gmail | Emails de pedidos (SMTP con contraseña de aplicación) | ~500 emails/día |
 | Stripe (cuenta del cliente) | Cobros | Sin cuota; solo comisión por venta |
 
-Los únicos costes son el dominio (~10–15 €/año) y la comisión de Stripe por venta.
+Los únicos costes son el dominio (~10–15 €/año, se puede pagar por transferencia o PayPal en el
+registrador) y la comisión de Stripe, que se descuenta de cada venta. No hace falta meter una tarjeta en ningún servicio.
 
 > Las pantallas de estos servicios cambian de vez en cuando: si un botón tiene otro nombre, busca la
 > opción equivalente en la misma sección.
@@ -93,7 +94,7 @@ cierras, vuelve a hacer el `export`.)*
 ### Variables públicas (`wrangler.toml` → `[vars]`)
 
 - `ADMIN_EMAILS`: emails con acceso al panel separados por comas, p. ej.
-  `"vendedor@sucorreo.com,ruben.palacio@zierzoware.com"`. Si está vacío, nadie puede entrar al panel.
+  `"vendedor@sucorreo.com,otro@sucorreo.com"`. Si está vacío, nadie puede entrar al panel.
   Quitar un email y volver a publicar le retira el acceso (la tarea horaria cierra también sus sesiones).
 - `FIREBASE_PROJECT_ID` y `FIREBASE_WEB_CONFIG`: del paso 1.
 - `SITE_URL`: déjalo vacío hasta tener dominio propio.
@@ -106,7 +107,7 @@ npx wrangler secret put FIREBASE_SERVICE_ACCOUNT < service-account.json
 rm service-account.json
 npx wrangler secret put STRIPE_SECRET_KEY        # de momento escribe: sk_test_pendiente
 npx wrangler secret put STRIPE_WEBHOOK_SECRET    # de momento escribe: whsec_pendiente
-npx wrangler secret put BREVO_API_KEY            # de momento escribe: disabled
+npx wrangler secret put GMAIL_APP_PASSWORD       # de momento escribe: disabled
 npx wrangler secret put CLOUDINARY_API_SECRET    # de momento escribe: pendiente
 ```
 
@@ -209,25 +210,36 @@ aparece en el panel como **Pagado** y que el stock baja.
 **Pasar a real:** cuando el vendedor complete la verificación de Stripe, repite este paso con el modo
 de prueba desactivado (`sk_live_…` y un webhook nuevo en modo real).
 
-## 7. 👤 Emails con Brevo
+## 7. 👤 Emails desde Gmail
 
-1. Cuenta gratuita en <https://www.brevo.com>.
-2. **Remitentes, dominios e IP** → **Dominios** → añade el dominio de la tienda → añade en su DNS los
-   registros que indica (DKIM, DMARC) → Verificar. *(Hasta tener dominio puedes verificar un remitente
-   suelto en «Remitentes».)*
+La tienda envía los emails (confirmación al comprador, avisos al vendedor) desde la cuenta de Gmail del
+vendedor, por SMTP. Gmail los firma, así que llegan a la bandeja de entrada, y quedan en «Enviados».
+
+1. En la cuenta de Gmail: **Cuenta de Google → Seguridad → Verificación en 2 pasos** activada (sin ella
+   Google no deja crear contraseñas de aplicación).
+2. <https://myaccount.google.com/apppasswords> → nombre «Tienda» → **Crear**. Google muestra 16 letras.
 
 ```
-VALOR QUE NECESITO: clave de API de Brevo (xkeysib-…)
-DÓNDE OBTENERLO:    Brevo → menú de la cuenta → SMTP y API → pestaña «Claves API» → Generar una nueva clave API
-DÓNDE PEGARLO:      npx wrangler secret put BREVO_API_KEY
+VALOR QUE NECESITO: contraseña de aplicación de Gmail (16 letras)
+DÓNDE OBTENERLO:    https://myaccount.google.com/apppasswords
+DÓNDE PEGARLO:      secretos.env → GMAIL_APP_PASSWORD, y después npm run secrets
 ```
 
-3. En el panel → Ajustes → Tienda: **Remitente** = una dirección del dominio verificado (p. ej.
-   `pedidos@sudominio.es`) y **Email de avisos** = donde el vendedor quiere recibir los pedidos.
+3. `wrangler.toml` → `GMAIL_USER` = esa cuenta (ya está `mivotunning@gmail.com`).
+4. En el panel → Ajustes → Tienda: **Remitente** vacío o igual a esa cuenta (otra dirección solo si está
+   añadida en Gmail → Configuración → Cuentas → «Enviar como») y **Email de avisos** = donde el vendedor
+   quiere recibir los pedidos.
+5. `wrangler.toml` → `ORDER_ALERT_EMAILS`: las únicas direcciones que reciben los avisos al vendedor
+   (pedido nuevo, devolución, alerta de cobro). Mientras tenga valor, el email de avisos del panel no se usa.
+
+Si el vendedor cambia la contraseña de Google, la contraseña de aplicación deja de valer: hay que crear
+otra y volver a subirla. Los fallos de envío aparecen en los registros del Worker («Error enviando email»).
 
 ## 8. 👤 Dominio propio
 
-El dominio tiene que estar gestionado por Cloudflare (gratis):
+Cómpralo en un registrador que acepte transferencia bancaria o PayPal, para no meter la tarjeta. Solo el
+dominio, sin hosting, correo ni otros extras, y mirando el precio de renovación. El DNS y el HTTPS los
+gestiona Cloudflare gratis:
 
 1. Cloudflare → **Añadir un dominio** → plan **Free** → Cloudflare te da 2 servidores de nombres.
 2. En la web donde compraste el dominio, cambia sus servidores de nombres por esos dos (puede tardar unas horas).
