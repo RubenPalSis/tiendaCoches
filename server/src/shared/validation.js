@@ -98,3 +98,15 @@ export function validateCartItems(items, { maxLines, maxQtyPerLine }) {
   }
   return { ok: true, items: [...merged].map(([id, qty]) => ({ id, qty })) };
 }
+
+/**
+ * Garantía de productos usados válida para consumidores: al menos 1 año (art. 120 TRLGDCU).
+ * Rechaza vacío, «0…», y plazos en días, semanas o menos de 12 meses.
+ */
+export function isValidUsedWarranty(value) {
+  const v = String(value ?? '').trim();
+  if (!v || /^0+(\s|$)/.test(v)) return false;
+  if (/^\d+\s*(d[ií]as?|semanas?)\b/i.test(v)) return false;
+  if (/^\d+\s*mes(es)?\b/i.test(v)) return Number.parseInt(v, 10) >= 12;
+  return true;
+}

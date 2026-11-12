@@ -2,6 +2,7 @@ import { html, raw } from '../../shared/escape.js';
 import { toCents, centsToInput } from '../../shared/money.js';
 import { icon } from '../../shared/product-card.js';
 import { COUNTRIES } from '../../shared/constants.js';
+import { isValidUsedWarranty } from '../../shared/validation.js';
 import { DEFAULT_SHIPPING_RULES } from '../../shared/shipping.js';
 import { qs, qsa, on, setLoading } from '../../core/dom.js';
 import { viewHead, toast, errorBox, confirmDialog } from '../ui.js';
@@ -232,7 +233,7 @@ export async function render(view, { firebase }) {
         const data = Object.fromEntries(Object.entries(d).map(([k, v]) => [k, String(v).trim().slice(0, 500)]));
         data.topbar = String(d.topbar ?? '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 4);
         if (!data.name) return toast('El nombre de la tienda es obligatorio.', { type: 'error' });
-        if (!data.usedWarranty || /^0+(\s|$)/.test(data.usedWarranty) || /^\d+\s*(d[ií]as?|semanas?|mes(es)?)\b/i.test(data.usedWarranty) && !/^(1[2-9]|[2-9]\d)\s*mes/i.test(data.usedWarranty)) {
+        if (!isValidUsedWarranty(data.usedWarranty)) {
           return toast('La garantía de productos usados tiene que ser de al menos 1 año.', { type: 'error' });
         }
         save(qs('button[type="submit"]', e.target), 'store', data);

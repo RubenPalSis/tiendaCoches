@@ -3,6 +3,7 @@ import { DEFAULT_SHIPPING_RULES } from '../shared/shipping.js';
 import { LIMITS } from '../shared/constants.js';
 import { logger } from './log.js';
 import { applyGlsTariff } from '../shipping/gls-tariff.js';
+import { isValidUsedWarranty } from '../shared/validation.js';
 
 export const DEFAULT_STORE = {
   name: 'Recambios Online',
@@ -59,6 +60,8 @@ export async function getSettings(name, { fresh = false } = {}) {
   if (name === 'shipping') await ensureGlsTariff();
   const snap = await db.doc(`settings/${name}`).get();
   const value = { ...DEFAULTS[name], ...(snap.exists ? snap.data() : {}), configured: snap.exists };
+  // Nunca mostrar una garantía por debajo del mínimo legal (p. ej. «0» guardado antes de validar el panel).
+  if (name === 'store' && !isValidUsedWarranty(value.usedWarranty)) value.usedWarranty = DEFAULT_STORE.usedWarranty;
   cache.set(name, { at: Date.now(), value });
   return value;
 }

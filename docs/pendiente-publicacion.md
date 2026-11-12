@@ -59,11 +59,16 @@ entran aquí.
 ## 1. Datos del vendedor (bloquean la apertura)
 
 - [ ] Alta de autónomo y situación fiscal confirmadas por la gestoría.
-- [x] Garantía de piezas usadas: «1 año» por defecto (mínimo legal, art. 120 TRLGDCU). Si en Firestore ya
-      se guardó «0», abrir Ajustes → Tienda, poner «1 año» y guardar: el panel ya no acepta menos.
-- [ ] Textos de `public/legal/` (aviso legal, privacidad, condiciones, devoluciones, cookies): leerlos
-      con el vendedor y pedir a su gestoría que les eche un vistazo. Así no hay que pagar un abogado aparte.
-- [ ] Zonas de envío (Península, Portugal, ¿Baleares?) y si hay envío gratis a partir de cierto importe.
+- [x] Garantía de piezas usadas: «1 año» por defecto (mínimo legal, art. 120 TRLGDCU). El panel no deja
+      guardar menos y, si en Firestore queda un valor no válido (había «0»), la web muestra «1 año».
+      Aun así, poner «1 año» en Ajustes → Tienda y guardar, para que el dato quede bien.
+- [ ] Textos de `public/legal/` (aviso legal, privacidad, condiciones, devoluciones, cookies): revisados el
+      12 de noviembre de 2026. Corregido en privacidad: la web la aloja Cloudflare (no Firebase) y los emails
+      los envía Brevo. Falta que el vendedor los lea y que la gestoría les eche un vistazo.
+- [x] Zonas de envío activas: Península, Baleares (Mallorca; Menorca, Ibiza y Formentera) y Portugal
+      continental. Desactivadas: Canarias, Ceuta, Melilla y Andorra. Sin envío gratis.
+- [ ] Opcional: poner el plazo de entrega de Baleares y Portugal en Ajustes → Envíos (ahora solo lo tiene
+      la Península).
 
 ## 2. Firebase (gratis, plan Spark)
 
@@ -93,10 +98,10 @@ entran aquí.
 ## 5. Emails (Brevo gratis, 300/día)
 
 - [x] Crear la cuenta de Brevo (plan Free, sin tarjeta) con mivotunning@gmail.com.
-- [ ] Remitentes → añadir y verificar mivotunning@gmail.com (llega un código a ese correo).
+- [x] Remitentes → añadir y verificar mivotunning@gmail.com (llega un código a ese correo).
 - [x] SMTP y API → Claves API → generar una (`xkeysib-…`) y ponerla en `secretos.env` (`BREVO_API_KEY`).
       Los datos SMTP (smtp-relay.brevo.com) no hacen falta: la tienda usa la API.
-- [ ] Ejecutar `npm run secrets` (paso 3).
+- [x] `BREVO_API_KEY` subida a Cloudflare. Emails enviándose bien (comprobado el 12 de noviembre de 2026).
 - [ ] Panel → Ajustes → Tienda: remitente vacío.
 - [ ] Con dominio propio: autenticar el dominio en Brevo (DKIM/DMARC en Cloudflare) y cambiar
       `EMAIL_FROM` a una dirección del dominio, para que no caigan en spam.
