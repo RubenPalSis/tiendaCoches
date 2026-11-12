@@ -13,7 +13,7 @@ export const DEFAULT_STORE = {
   email: '',
   phone: '',
   whatsapp: '',
-  usedWarranty: '',
+  usedWarranty: '1 año', // mínimo legal para consumidores (art. 120 TRLGDCU)
   notificationEmail: '',
   emailFrom: '',
   topbar: ['Envíos con GLS', 'Pago 100% seguro con Stripe', 'Atención personalizada'],

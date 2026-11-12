@@ -11,7 +11,7 @@ dominio** y **sin meter la tarjeta en ningún sitio**. Los pasos detallados de c
 | Cloudflare Workers (Free) | Web, servidor, DNS, HTTPS, tarea horaria | 0 € | No |
 | Firebase **Spark** | Login del panel y base de datos | 0 € | No |
 | Cloudinary (Free) | Fotos de las piezas | 0 € | No |
-| Gmail (mivotunning@gmail.com) | Emails de pedidos | 0 € | No |
+| Brevo (Free) | Emails de pedidos (300/día) | 0 € | No |
 | Google Search Console | Aparecer en Google | 0 € | No |
 | Stripe | Cobrar con tarjeta | 0 € al mes | No (el vendedor da su IBAN para cobrar) |
 
@@ -31,7 +31,7 @@ entran aquí.
   diarias, las sobrantes fallan, pero no se cobra nada. Para esta tienda es un margen muy amplio.
 - Cloudinary: plan Free, sin tarjeta. Si se agotan los 25 créditos mensuales, deja de servir fotos
   nuevas hasta el mes siguiente. Para un catálogo de este tamaño sobra.
-- Emails: usar la cuenta de Gmail gratuita. No hace falta Google Workspace ni contratar correo con el dominio.
+- Emails: Brevo en plan Free (300 al día). No contratar ningún plan de Brevo ni Google Workspace, ni correo con el dominio.
 - Si cualquier pantalla pide una tarjeta, es que se está contratando algo de pago: cancelar y volver atrás.
 - Dominio: mirar el **precio de renovación**, no solo el del primer año (muchas webs ponen el primero a
   1 € y luego cobran 20–30 €). No contratar extras: hosting, correo, «SSL», «protección SEO»… Cloudflare
@@ -46,17 +46,21 @@ entran aquí.
 - Tarifa GLS Business Parcel 2026 aplicada automáticamente desde el código.
 - DNI / NIE / CIF obligatorio en el checkout.
 - Scripts para importar el catálogo de Wallapop y para pasar a las categorías y marcas nuevas.
-- Emails enviados desde mivotunning@gmail.com por SMTP (gratis, sin Brevo). Los de un pedido llegan
+- Emails con Brevo (API, plan gratuito) y remitente mivotunning@gmail.com. Los de un pedido llegan
   **solo** al comprador y a mivotunning@gmail.com (`ORDER_ALERT_EMAILS`; el panel no lo cambia).
 - `secretos.env` (git lo ignora) para apuntar todos los tokens, y `npm run secrets` para subirlos a Cloudflare.
 - `.vscode/` en el `.gitignore`.
-- Tests en verde en local (unitarios 86/86, e2e y responsive), 5 de noviembre de 2026.
+- No quedan textos tipo `"[pendiente: ...]"` en páginas legales, contacto o envíos; si faltan datos, se muestran mensajes genéricos y no un placeholder técnico.
+- Garantía de piezas usadas «1 año» por defecto; el panel no deja guardar menos de 1 año.
+- Firestore creado en `europe-west1` (comprobado el 12 de noviembre de 2026).
+- Clave API de Brevo (`xkeysib-…`) guardada en `secretos.env`.
+- Tests en verde en local (unitarios 83/83, e2e y responsive), 12 de noviembre de 2026.
 
 ## 1. Datos del vendedor (bloquean la apertura)
 
 - [ ] Alta de autónomo y situación fiscal confirmadas por la gestoría.
-- [ ] Garantía de piezas usadas: en el panel pone «0», y la página de devoluciones mostraría «plazo de
-      garantía de 0». El mínimo legal para un consumidor es **1 año** (art. 120 TRLGDCU): poner «1 año».
+- [x] Garantía de piezas usadas: «1 año» por defecto (mínimo legal, art. 120 TRLGDCU). Si en Firestore ya
+      se guardó «0», abrir Ajustes → Tienda, poner «1 año» y guardar: el panel ya no acepta menos.
 - [ ] Textos de `public/legal/` (aviso legal, privacidad, condiciones, devoluciones, cookies): leerlos
       con el vendedor y pedir a su gestoría que les eche un vistazo. Así no hay que pagar un abogado aparte.
 - [ ] Zonas de envío (Península, Portugal, ¿Baleares?) y si hay envío gratis a partir de cierto importe.
@@ -64,7 +68,7 @@ entran aquí.
 ## 2. Firebase (gratis, plan Spark)
 
 - [ ] Authentication: activar email/contraseña, crear el usuario mivotunning@gmail.com y desactivar el registro.
-- [ ] Crear Firestore en `europe-west1`, en modo producción.
+- [x] Crear Firestore en `europe-west1`, en modo producción.
 - [ ] `npm run deploy:rules` (reglas e índices).
 - [ ] Generar `service-account.json` (hace falta para los secretos y la importación).
 
@@ -86,12 +90,16 @@ entran aquí.
       que hacen falta para calcular la tarifa GLS.
 - [ ] Borrar `service-account.json` del equipo.
 
-## 5. Emails (Gmail gratis)
+## 5. Emails (Brevo gratis, 300/día)
 
-- [ ] Activar la verificación en 2 pasos en mivotunning@gmail.com y crear una contraseña de aplicación
-      en <https://myaccount.google.com/apppasswords>.
-- [ ] Ponerla en `secretos.env` (`GMAIL_APP_PASSWORD`) y ejecutar `npm run secrets`.
-- [ ] Panel → Ajustes → Tienda: remitente vacío o mivotunning@gmail.com.
+- [x] Crear la cuenta de Brevo (plan Free, sin tarjeta) con mivotunning@gmail.com.
+- [ ] Remitentes → añadir y verificar mivotunning@gmail.com (llega un código a ese correo).
+- [x] SMTP y API → Claves API → generar una (`xkeysib-…`) y ponerla en `secretos.env` (`BREVO_API_KEY`).
+      Los datos SMTP (smtp-relay.brevo.com) no hacen falta: la tienda usa la API.
+- [ ] Ejecutar `npm run secrets` (paso 3).
+- [ ] Panel → Ajustes → Tienda: remitente vacío.
+- [ ] Con dominio propio: autenticar el dominio en Brevo (DKIM/DMARC en Cloudflare) y cambiar
+      `EMAIL_FROM` a una dirección del dominio, para que no caigan en spam.
 
 ## 6. Stripe (sin cuota; comisión por venta)
 
@@ -127,8 +135,8 @@ entran aquí.
 - [ ] `npm test`, `npm run test:e2e` y `npm run test:responsive` en verde justo antes de abrir.
 - [ ] Un pedido completo de principio a fin: pago, email al comprador y a mivotunning@gmail.com, panel,
       marcar como enviado con seguimiento GLS y consultarlo en `/pedido`.
-- [ ] Que no quede ningún «[pendiente: …]» en las páginas legales, de contacto o de envíos (se rellenan
-      solos al completar el panel).
+- [x] Que no quede ningún «[pendiente: …]» en las páginas legales, de contacto o de envíos (se rellenan
+      solos al completar el panel). En la app ya se muestra texto genérico si faltan datos y no un placeholder técnico.
 - [ ] Comprobar que ninguna cuenta tiene tarjeta guardada ni plan de pago: Firebase en **Spark**, Cloudflare en
       **Free** y Cloudinary en **Free**.
 - [ ] Decidir si se quita la vista previa de GitHub Pages (también gratis), para no tener dos webs indexadas.

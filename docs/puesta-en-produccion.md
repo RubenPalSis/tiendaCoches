@@ -10,7 +10,7 @@ o el cliente. El resto se hace con comandos en la terminal de este proyecto.
 | Cloudflare Workers | Web + servidor (pagos, emails, páginas para Google, panel, tarea horaria) | 100.000 peticiones/día al servidor; archivos de la web sin límite |
 | Firebase **Spark** | Login del panel + base de datos (Firestore) | 50.000 lecturas y 20.000 escrituras/día, 1 GB |
 | Cloudinary | Fotos de las piezas | 25 créditos/mes (1 crédito ≈ 1 GB de tráfico o de espacio) |
-| Gmail | Emails de pedidos (SMTP con contraseña de aplicación) | ~500 emails/día |
+| Brevo | Emails de pedidos (API HTTP) | 300 emails/día |
 | Stripe (cuenta del cliente) | Cobros | Sin cuota; solo comisión por venta |
 
 Los únicos costes son el dominio (~10–15 €/año, se puede pagar por transferencia o PayPal en el
@@ -107,7 +107,7 @@ npx wrangler secret put FIREBASE_SERVICE_ACCOUNT < service-account.json
 rm service-account.json
 npx wrangler secret put STRIPE_SECRET_KEY        # de momento escribe: sk_test_pendiente
 npx wrangler secret put STRIPE_WEBHOOK_SECRET    # de momento escribe: whsec_pendiente
-npx wrangler secret put GMAIL_APP_PASSWORD       # de momento escribe: disabled
+npx wrangler secret put BREVO_API_KEY            # de momento escribe: disabled
 npx wrangler secret put CLOUDINARY_API_SECRET    # de momento escribe: pendiente
 ```
 
@@ -210,30 +210,32 @@ aparece en el panel como **Pagado** y que el stock baja.
 **Pasar a real:** cuando el vendedor complete la verificación de Stripe, repite este paso con el modo
 de prueba desactivado (`sk_live_…` y un webhook nuevo en modo real).
 
-## 7. 👤 Emails desde Gmail
+## 7. 👤 Emails con Brevo
 
-La tienda envía los emails (confirmación al comprador, avisos al vendedor) desde la cuenta de Gmail del
-vendedor, por SMTP. Gmail los firma, así que llegan a la bandeja de entrada, y quedan en «Enviados».
+La tienda envía los emails (confirmación al comprador, avisos al vendedor) con la API de Brevo. Plan
+gratuito: 300 emails al día, sin tarjeta.
 
-1. En la cuenta de Gmail: **Cuenta de Google → Seguridad → Verificación en 2 pasos** activada (sin ella
-   Google no deja crear contraseñas de aplicación).
-2. <https://myaccount.google.com/apppasswords> → nombre «Tienda» → **Crear**. Google muestra 16 letras.
+1. Crea la cuenta en <https://www.brevo.com> (plan Free) con mivotunning@gmail.com.
+2. **Remitentes, dominios e IP dedicadas → Remitentes → Añadir remitente**: nombre de la tienda y
+   mivotunning@gmail.com. Brevo envía un código a ese correo para verificarlo.
+3. **SMTP y API → Claves API → Generar una nueva clave API** (nombre «Tienda»). Empieza por `xkeysib-`.
 
 ```
-VALOR QUE NECESITO: contraseña de aplicación de Gmail (16 letras)
-DÓNDE OBTENERLO:    https://myaccount.google.com/apppasswords
-DÓNDE PEGARLO:      secretos.env → GMAIL_APP_PASSWORD, y después npm run secrets
+VALOR QUE NECESITO: clave API de Brevo (xkeysib-…)
+DÓNDE OBTENERLO:    Brevo → SMTP y API → Claves API
+DÓNDE PEGARLO:      secretos.env → BREVO_API_KEY, y después npm run secrets
 ```
 
-3. `wrangler.toml` → `GMAIL_USER` = esa cuenta (ya está `mivotunning@gmail.com`).
-4. En el panel → Ajustes → Tienda: **Remitente** vacío o igual a esa cuenta (otra dirección solo si está
-   añadida en Gmail → Configuración → Cuentas → «Enviar como») y **Email de avisos** = donde el vendedor
-   quiere recibir los pedidos.
-5. `wrangler.toml` → `ORDER_ALERT_EMAILS`: las únicas direcciones que reciben los avisos al vendedor
+4. `wrangler.toml` → `EMAIL_FROM` = el remitente verificado (ya está `mivotunning@gmail.com`).
+5. En el panel → Ajustes → Tienda: **Remitente** vacío (otra dirección solo si también está verificada
+   en Brevo).
+6. `wrangler.toml` → `ORDER_ALERT_EMAILS`: las únicas direcciones que reciben los avisos al vendedor
    (pedido nuevo, devolución, alerta de cobro). Mientras tenga valor, el email de avisos del panel no se usa.
 
-Si el vendedor cambia la contraseña de Google, la contraseña de aplicación deja de valer: hay que crear
-otra y volver a subirla. Los fallos de envío aparecen en los registros del Worker («Error enviando email»).
+Con remitente @gmail.com algunos correos pueden ir a spam, porque Brevo no puede firmarlos en nombre de
+Gmail. Cuando tengas dominio propio: Brevo → **Dominios → Añadir dominio**, copia los registros DNS
+(DKIM, DMARC) en Cloudflare, verifica un remitente tipo `pedidos@tudominio.es` y ponlo en `EMAIL_FROM`.
+Los fallos de envío aparecen en los registros del Worker («Error enviando email») y en Brevo → Estadísticas.
 
 ## 8. 👤 Dominio propio
 

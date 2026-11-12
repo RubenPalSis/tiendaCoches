@@ -2,7 +2,7 @@
 
 Tienda online sin WordPress/Shopify y **sin planes de pago**: HTML + CSS + JavaScript servidos por
 Cloudflare Workers (web + servidor), Firebase en plan gratuito Spark (Authentication + Firestore),
-fotos en Cloudinary, emails desde Gmail (SMTP), pagos con Stripe Checkout y envíos con GLS (gestión manual,
+fotos en Cloudinary, emails con Brevo (API, plan gratuito), pagos con Stripe Checkout y envíos con GLS (gestión manual,
 preparada para automatizar).
 
 - **Compradores:** sin registro. Catálogo con búsqueda instantánea, filtros, ficha de producto,

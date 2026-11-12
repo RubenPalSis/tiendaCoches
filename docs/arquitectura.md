@@ -15,7 +15,7 @@ Visitante ──► Cloudflare Workers (red global de Cloudflare)
                  └─ cada hora (Cron Trigger): reservas caducadas, admins retirados, reconstrucción del índice
 Worker ──REST──► Firestore + Authentication (Firebase Spark) con una cuenta de servicio
 Panel /admin ──► Firebase Auth + Firestore (reglas: custom claim admin) + /fn/* + fotos directas a Cloudinary
-Emails ──► SMTP de Gmail (smtp.gmail.com:465, sockets TCP del Worker)
+Emails ──► API HTTP de Brevo (api.brevo.com/v3/smtp/email)
 ```
 
 Firestore en `europe-west1`. El Worker no usa `firebase-admin` (no funciona en Workers): habla con las
@@ -69,7 +69,7 @@ Importes en céntimos (enteros) y pesos en gramos.
 ## Seguridad
 
 - Reglas de Firestore con denegación por defecto y validación de tipos/rangos (tests en `tests/rules`).
-- Secretos del Worker (`wrangler secret put`): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `GMAIL_APP_PASSWORD`,
+- Secretos del Worker (`wrangler secret put`): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `BREVO_API_KEY`,
   `CLOUDINARY_API_SECRET`, `FIREBASE_SERVICE_ACCOUNT`. La cuenta de servicio es la credencial más sensible:
   solo vive como secreto en Cloudflare y se borra del equipo tras configurarla.
 - Cabeceras: CSP estricta, HSTS, `nosniff`, `frame-ancestors 'none'`; panel con `no-store` y `noindex`

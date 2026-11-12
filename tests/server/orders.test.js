@@ -7,7 +7,7 @@ import { clearFirestore, skipGlsTariff } from './helpers.js';
 
 process.env.GCLOUD_PROJECT = 'demo-tienda-test';
 process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret';
-process.env.GMAIL_APP_PASSWORD = 'disabled';
+process.env.BREVO_API_KEY = 'disabled';
 process.env.SITE_URL = 'https://tienda.test';
 
 const { db, Timestamp } = await import('../../server/src/lib/firebase.js');

@@ -29,7 +29,7 @@ function storeForm(s) {
       <p class="hint" style="margin:0">Aparecen en el aviso legal, la política de privacidad y las condiciones de compra.</p>
       <div class="inline-fields">${raw(input('ownerName', 'Nombre y apellidos / razón social', s.ownerName))}${raw(input('taxId', 'NIF', s.taxId))}</div>
       ${raw(input('address', 'Domicilio', s.address, { placeholder: 'Calle, nº, CP, ciudad, provincia' }))}
-      ${raw(input('usedWarranty', 'Garantía de productos usados', s.usedWarranty, { placeholder: 'Ej.: 1 año', hint: 'Confirma el plazo mínimo legal con tu gestoría.' }))}
+      ${raw(input('usedWarranty', 'Garantía de productos usados', s.usedWarranty, { placeholder: 'Ej.: 1 año', hint: 'Mínimo legal para particulares: 1 año.' }))}
     </section>
     <section class="box form-stack"><h2 class="box__title">Contacto y emails</h2>
       <div class="inline-fields">
@@ -39,7 +39,7 @@ function storeForm(s) {
       </div>
       <div class="inline-fields">
         ${raw(input('notificationEmail', 'Email donde recibir avisos de pedidos', s.notificationEmail, { type: 'email', hint: 'En la tienda publicada los avisos van a la dirección fijada en el servidor (wrangler.toml → ORDER_ALERT_EMAILS).' }))}
-        ${raw(input('emailFrom', 'Remitente de los emails a clientes', s.emailFrom, { type: 'email', hint: 'Vacío = la cuenta de Gmail de la tienda. Otra dirección solo si está añadida en Gmail → «Enviar como».' }))}
+        ${raw(input('emailFrom', 'Remitente de los emails a clientes', s.emailFrom, { type: 'email', hint: 'Vacío = mivotunning@gmail.com (EMAIL_FROM). Otra dirección solo si está verificada en Brevo → Remitentes.' }))}
       </div>
     </section>
     <div class="save-bar"><button class="btn btn--primary" type="submit">${icon('check')} Guardar</button></div>
@@ -232,6 +232,9 @@ export async function render(view, { firebase }) {
         const data = Object.fromEntries(Object.entries(d).map(([k, v]) => [k, String(v).trim().slice(0, 500)]));
         data.topbar = String(d.topbar ?? '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 4);
         if (!data.name) return toast('El nombre de la tienda es obligatorio.', { type: 'error' });
+        if (!data.usedWarranty || /^0+(\s|$)/.test(data.usedWarranty) || /^\d+\s*(d[ií]as?|semanas?|mes(es)?)\b/i.test(data.usedWarranty) && !/^(1[2-9]|[2-9]\d)\s*mes/i.test(data.usedWarranty)) {
+          return toast('La garantía de productos usados tiene que ser de al menos 1 año.', { type: 'error' });
+        }
         save(qs('button[type="submit"]', e.target), 'store', data);
       });
     }

@@ -19,7 +19,7 @@ const ENV = {
   FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST,
   FIREBASE_AUTH_EMULATOR_HOST: process.env.FIREBASE_AUTH_EMULATOR_HOST,
   ADMIN_EMAILS: 'admin@x.es',
-  GMAIL_APP_PASSWORD: 'disabled',
+  BREVO_API_KEY: 'disabled',
   CLOUDINARY_FOLDER: 'tienda',
   ASSETS: { fetch: async (req) => new Response(`asset ${new URL(req.url).pathname}`) },
 };

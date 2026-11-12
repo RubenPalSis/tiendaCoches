@@ -16,7 +16,7 @@ for (const el of qsa('[data-store]')) {
   const value = store[el.dataset.store];
   if (value) el.textContent = value;
   else {
-    el.textContent = `[pendiente: ${el.dataset.label || el.dataset.store}]`;
+    el.textContent = 'Información pendiente en el panel de administración.';
     el.classList.add('missing-data');
   }
 }
@@ -47,7 +47,7 @@ if (ratesEl) {
         shipping.maxGirth && `${shipping.maxGirth} cm de largo + perímetro (largo + 2 × ancho + 2 × alto)`,
         shipping.maxPackageWeight && `${shipping.maxPackageWeight / 1000} kg por paquete`,
       ].filter(Boolean).join(' y ')}. Para piezas mayores, contacta con nosotros y te daremos un presupuesto.</p>` : '')
-    : html`<p class="missing-data">[pendiente: configurar tarifas de envío en el panel]</p>`;
+    : html`<p class="missing-data">Todavía no hay tarifas de envío configuradas en el panel.</p>`;
 }
 
 // Tarjetas de contacto.
@@ -59,7 +59,7 @@ if (contactEl) {
     store.phone && html`<a class="contact-card" href="${telUrl(store.phone)}">${icon('phone', 'icon icon--lg')}<span><strong>Teléfono</strong><span>${store.phone}</span></span></a>`,
     store.email && html`<a class="contact-card" href="mailto:${store.email}">${icon('mail', 'icon icon--lg')}<span><strong>Email</strong><span>${store.email}</span></span></a>`,
   ].filter(Boolean);
-  contactEl.innerHTML = cards.length ? cards.join('') : html`<p class="missing-data">[pendiente: datos de contacto en el panel]</p>`;
+  contactEl.innerHTML = cards.length ? cards.join('') : html`<p class="missing-data">Todavía no hay datos de contacto configurados en el panel.</p>`;
 }
 
 // Formulario de desistimiento en línea.

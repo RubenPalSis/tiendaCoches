@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const file = join(root, 'secretos.env');
-const WORKER_SECRETS = ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'GMAIL_APP_PASSWORD', 'CLOUDINARY_API_SECRET'];
+const WORKER_SECRETS = ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'BREVO_API_KEY', 'CLOUDINARY_API_SECRET'];
 
 if (!existsSync(file)) {
   console.error('No existe secretos.env en la raíz del proyecto.');

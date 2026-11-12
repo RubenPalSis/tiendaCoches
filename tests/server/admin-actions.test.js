@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { clearFirestore, skipGlsTariff } from './helpers.js';
 
 process.env.GCLOUD_PROJECT = 'demo-tienda-test2';
-process.env.GMAIL_APP_PASSWORD = 'disabled';
+process.env.BREVO_API_KEY = 'disabled';
 process.env.ADMIN_EMAILS = 'admin@x.es';
 
 const { db, Timestamp } = await import('../../server/src/lib/firebase.js');
@@ -56,7 +56,7 @@ test('flujo GLS manual: preparando → enviado con seguimiento → entregado', a
   await assert.rejects(ACTIONS.setStatus({ orderId: ORDER_ID, status: 'shipped' }, 'admin'), /seguimiento/);
   const res = await ACTIONS.setStatus({ orderId: ORDER_ID, status: 'shipped', trackingNumber: ' 1234567890 ' }, 'admin');
   assert.equal(res.ok, true);
-  assert.equal(res.emailed, false, 'sin SMTP no se envía email, pero el pedido se actualiza');
+  assert.equal(res.emailed, false, 'sin Brevo no se envía email, pero el pedido se actualiza');
   const shipped = await order();
   assert.equal(shipped.orderStatus, 'shipped');
   assert.equal(shipped.shipping.trackingNumber, '1234567890');
