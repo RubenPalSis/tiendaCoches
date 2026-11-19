@@ -62,9 +62,9 @@ entran aquí.
 - [x] Garantía de piezas usadas: «1 año» por defecto (mínimo legal, art. 120 TRLGDCU). El panel no deja
       guardar menos y, si en Firestore queda un valor no válido (había «0»), la web muestra «1 año».
       Aun así, poner «1 año» en Ajustes → Tienda y guardar, para que el dato quede bien.
-- [ ] Textos de `public/legal/` (aviso legal, privacidad, condiciones, devoluciones, cookies): revisados el
-      12 de noviembre de 2026. Corregido en privacidad: la web la aloja Cloudflare (no Firebase) y los emails
-      los envía Brevo. Falta que el vendedor los lea y que la gestoría les eche un vistazo.
+- [x] Textos de `public/legal/` (aviso legal, privacidad, condiciones, devoluciones, cookies): revisados el
+      12 de noviembre de 2026 (en privacidad: la web la aloja Cloudflare y los emails los envía Brevo) y dados
+      por buenos el 17 de noviembre de 2026.
 - [x] Zonas de envío activas: Península, Baleares (Mallorca; Menorca, Ibiza y Formentera) y Portugal
       continental. Desactivadas: Canarias, Ceuta, Melilla y Andorra. Sin envío gratis.
 - [ ] Opcional: poner el plazo de entrega de Baleares y Portugal en Ajustes → Envíos (ahora solo lo tiene
@@ -74,23 +74,28 @@ entran aquí.
 
 - [ ] Authentication: activar email/contraseña, crear el usuario mivotunning@gmail.com y desactivar el registro.
 - [x] Crear Firestore en `europe-west1`, en modo producción.
-- [ ] `npm run deploy:rules` (reglas e índices).
-- [ ] Generar `service-account.json` (hace falta para los secretos y la importación).
+- [x] `npm run deploy:rules` (reglas e índices), 17 de noviembre de 2026. Firebase en plan Spark y usuario
+      mivotunning@gmail.com creado (comprobado el mismo día).
+- [x] Generar la clave de la cuenta de servicio (hace falta para los secretos y la importación).
 
 ## 3. Cloudflare (gratis, plan Free)
 
-- [ ] Crear la cuenta (sin tarjeta) y un token de API con la plantilla «Editar Cloudflare Workers».
+- [x] Crear la cuenta (sin tarjeta) y un token de API con la plantilla «Editar Cloudflare Workers».
       Ponerlo en `secretos.env` (`CLOUDFLARE_API_TOKEN`).
-- [ ] Rellenar el resto de `secretos.env` (se puede dejar Stripe para el paso 6) y ejecutar `npm run secrets`.
-- [ ] Primer `npm run deploy`. La tienda queda en `tienda.<cuenta>.workers.dev`, gratis y con HTTPS.
-- [ ] Añadir ese dominio `.workers.dev` en Firebase → Authentication → Dominios autorizados.
+- [x] Rellenar el resto de `secretos.env` (se puede dejar Stripe para el paso 6) y ejecutar `npm run secrets`.
+      En Cloudflare: `BREVO_API_KEY`, `CLOUDINARY_API_SECRET`, `FIREBASE_SERVICE_ACCOUNT`, `STRIPE_SECRET_KEY`
+      y `STRIPE_WEBHOOK_SECRET` (17 de noviembre de 2026).
+- [x] Primer `npm run deploy`. La tienda está en `https://tienda.mivotunning.workers.dev`, gratis y con HTTPS
+      (último despliegue: 17 de noviembre de 2026).
+- [ ] Añadir `tienda.mivotunning.workers.dev` en Firebase → Authentication → Dominios autorizados.
 
 ## 4. Fotos y catálogo (Cloudinary gratis)
 
-- [ ] Crear la cuenta de Cloudinary (plan Free, sin tarjeta) y rellenar `CLOUDINARY_CLOUD_NAME` y
+- [x] Crear la cuenta de Cloudinary (plan Free, sin tarjeta; cloud name `k89cwscu`) y rellenar `CLOUDINARY_CLOUD_NAME` y
       `CLOUDINARY_API_KEY` en `wrangler.toml` y `CLOUDINARY_API_SECRET` en `secretos.env`. Sin esto
       el vendedor no puede subir fotos desde el panel.
-- [ ] Importar el catálogo a Firestore (`scripts/import-catalog.js` o `wallapop-import.js import`).
+- [x] Importar el catálogo a Firestore: 46 productos y 9 categorías, todos activos y con fotos (comprobado
+      el 17 de noviembre de 2026).
 - [ ] Revisar el stock (todas las piezas se importan con 1 unidad), el peso y las medidas del paquete,
       que hacen falta para calcular la tarifa GLS.
 - [ ] Borrar `service-account.json` del equipo.

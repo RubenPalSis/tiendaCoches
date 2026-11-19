@@ -31,8 +31,8 @@ ORDER_ALERT_EMAILS = "mivotunning@gmail.com" # ÚNICOS destinatarios de los avis
 FIREBASE_PROJECT_ID = "mivotunning-f973f"
 # Configuración web de Firebase (es pública): Configuración del proyecto → Tus apps → Web
 FIREBASE_WEB_CONFIG = '{"apiKey":"AIzaSyDBb8lXbRT44PZTtQqa5VWrhyhRHXCuiww","authDomain":"mivotunning-f973f.firebaseapp.com","projectId":"mivotunning-f973f","appId":"1:1021948872243:web:cbe8f8c04ededaf88c0546","messagingSenderId":"1021948872243"}'
-CLOUDINARY_CLOUD_NAME = ""
-CLOUDINARY_API_KEY = ""
+CLOUDINARY_CLOUD_NAME = "k89cwscu"
+CLOUDINARY_API_KEY = "259716269727356"
 CLOUDINARY_FOLDER = "tienda"
 
 # ---------- Desarrollo local (npm run dev): emuladores de Firebase y fotos simuladas ----------
