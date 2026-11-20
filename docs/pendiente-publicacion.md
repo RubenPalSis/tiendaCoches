@@ -1,21 +1,35 @@
 # Pendiente para publicar la tienda
 
-Lista de tareas para poner Mivotunning en producción (noviembre 2026) **sin pagar nada salvo el
-dominio** y **sin meter la tarjeta en ningún sitio**. Los pasos detallados de cada servicio están en [puesta-en-produccion.md](puesta-en-produccion.md).
+Lista mínima para empezar a vender Mivotunning desde `workers.dev`, sin cuota mensual ni tarjeta.
+Stripe descuenta una comisión por cada pago. Pasos detallados: [puesta-en-produccion.md](puesta-en-produccion.md).
+
+## Lo que queda por hacer
+
+Revisión del 20 de noviembre de 2026. La web en `workers.dev` responde (HTTP 200); esto no confirma
+que el flujo de compra en producción esté listo.
+
+### Antes de abrir la tienda
+
+- [ ] Confirmar con la gestoría el tratamiento fiscal aplicable a las ventas de la tienda.
+- [ ] Panel → Ajustes → Envíos: revisar tarifas GLS, zonas, stock, peso y medidas de cada paquete;
+      ajustar pesos y medidas para que el precio de envío sea correcto.
+- [ ] Crear el webhook live de Stripe, guardar su secreto de firma actual en `secretos.env`, volver a
+      ejecutar `npm run secrets` y después probar un pago, email, pedido y stock.
+- [ ] Activar el checkout para clientes después de verificar el webhook.
+- [x] Firebase sigue en Spark y Cloudflare, Cloudinary y Brevo en planes gratuitos, sin servicios de pago
+      (confirmado por el usuario el 20 de noviembre).
 
 ## Lo que cuesta
 
 | Servicio | Para qué | Coste | ¿Pide tarjeta? |
 |---|---|---|---|
-| Dominio | Dirección de la web | **~10–15 €/año** (lo único que se paga) | No: pagar por transferencia o PayPal |
 | Cloudflare Workers (Free) | Web, servidor, DNS, HTTPS, tarea horaria | 0 € | No |
 | Firebase **Spark** | Login del panel y base de datos | 0 € | No |
 | Cloudinary (Free) | Fotos de las piezas | 0 € | No |
 | Brevo (Free) | Emails de pedidos (300/día) | 0 € | No |
-| Google Search Console | Aparecer en Google | 0 € | No |
 | Stripe | Cobrar con tarjeta | 0 € al mes | No (el vendedor da su IBAN para cobrar) |
 
-**Stripe** no tiene cuota, pero en cada venta se queda una comisión (con tarjetas europeas, en torno
+**Stripe** no tiene cuota mensual, pero en cada venta se queda una comisión (con tarjetas europeas, en torno
 al 1,5 % + 0,25 €). No es una factura aparte: se descuenta del cobro antes de que llegue a la cuenta del
 vendedor. Todos los cobros con tarjeta online la tienen; la única forma de no pagarla sería cobrar por
 transferencia bancaria, que la tienda no tiene programado.
@@ -33,9 +47,6 @@ entran aquí.
   nuevas hasta el mes siguiente. Para un catálogo de este tamaño sobra.
 - Emails: Brevo en plan Free (300 al día). No contratar ningún plan de Brevo ni Google Workspace, ni correo con el dominio.
 - Si cualquier pantalla pide una tarjeta, es que se está contratando algo de pago: cancelar y volver atrás.
-- Dominio: mirar el **precio de renovación**, no solo el del primer año (muchas webs ponen el primero a
-  1 € y luego cobran 20–30 €). No contratar extras: hosting, correo, «SSL», «protección SEO»… Cloudflare
-  da gratis el DNS y el HTTPS.
 
 ## Ya hecho
 
@@ -54,40 +65,39 @@ entran aquí.
 - Garantía de piezas usadas «1 año» por defecto; el panel no deja guardar menos de 1 año.
 - Firestore creado en `europe-west1` (comprobado el 12 de noviembre de 2026).
 - Clave API de Brevo (`xkeysib-…`) guardada en `secretos.env`.
-- Tests en verde en local (unitarios 83/83, e2e y responsive), 12 de noviembre de 2026.
+- Tests en verde en local (unitarios 83/83, e2e y responsive), 20 de noviembre de 2026.
 
 ## 1. Datos del vendedor (bloquean la apertura)
 
-- [ ] Alta de autónomo y situación fiscal confirmadas por la gestoría.
+- [x] Ivailo confirma que está dado de alta como autónomo (20 de noviembre).
+- [ ] Confirmar con la gestoría el tratamiento fiscal aplicable a las ventas de la tienda.
 - [x] Garantía de piezas usadas: «1 año» por defecto (mínimo legal, art. 120 TRLGDCU). El panel no deja
       guardar menos y, si en Firestore queda un valor no válido (había «0»), la web muestra «1 año».
-      Aun así, poner «1 año» en Ajustes → Tienda y guardar, para que el dato quede bien.
+      «1 año» guardado en Ajustes → Tienda; datos legales revisados y aviso «Configuración pendiente» eliminado
+      (confirmado por el usuario el 20 de noviembre).
 - [x] Textos de `public/legal/` (aviso legal, privacidad, condiciones, devoluciones, cookies): revisados el
       12 de noviembre de 2026 (en privacidad: la web la aloja Cloudflare y los emails los envía Brevo) y dados
       por buenos el 17 de noviembre de 2026.
 - [x] Zonas de envío activas: Península, Baleares (Mallorca; Menorca, Ibiza y Formentera) y Portugal
       continental. Desactivadas: Canarias, Ceuta, Melilla y Andorra. Sin envío gratis.
-- [ ] Opcional: poner el plazo de entrega de Baleares y Portugal en Ajustes → Envíos (ahora solo lo tiene
-      la Península).
 
 ## 2. Firebase (gratis, plan Spark)
 
-- [ ] Authentication: activar email/contraseña, crear el usuario mivotunning@gmail.com y desactivar el registro.
+- [x] Authentication: Ivailo confirma que puede entrar con su usuario (20 de noviembre).
 - [x] Crear Firestore en `europe-west1`, en modo producción.
 - [x] `npm run deploy:rules` (reglas e índices), 17 de noviembre de 2026. Firebase en plan Spark y usuario
       mivotunning@gmail.com creado (comprobado el mismo día).
 - [x] Generar la clave de la cuenta de servicio (hace falta para los secretos y la importación).
+- [x] `tienda.mivotunning.workers.dev` autorizado en Authentication (confirmado el 20 de noviembre).
 
 ## 3. Cloudflare (gratis, plan Free)
 
 - [x] Crear la cuenta (sin tarjeta) y un token de API con la plantilla «Editar Cloudflare Workers».
-      Ponerlo en `secretos.env` (`CLOUDFLARE_API_TOKEN`).
-- [x] Rellenar el resto de `secretos.env` (se puede dejar Stripe para el paso 6) y ejecutar `npm run secrets`.
-      En Cloudflare: `BREVO_API_KEY`, `CLOUDINARY_API_SECRET`, `FIREBASE_SERVICE_ACCOUNT`, `STRIPE_SECRET_KEY`
-      y `STRIPE_WEBHOOK_SECRET` (17 de noviembre de 2026).
+      El token de `secretos.env` funciona y permite consultar el Worker (20 de noviembre).
+- [x] Rellenar `secretos.env` y subir secretos con `npm run secrets`. Los cinco nombres esperados aparecen
+      en Cloudflare (comprobado el 20 de noviembre); no se pueden consultar sus valores.
 - [x] Primer `npm run deploy`. La tienda está en `https://tienda.mivotunning.workers.dev`, gratis y con HTTPS
-      (último despliegue: 17 de noviembre de 2026).
-- [ ] Añadir `tienda.mivotunning.workers.dev` en Firebase → Authentication → Dominios autorizados.
+      (último despliegue documentado: 17 de noviembre de 2026; URL comprobada con HTTP 200 el 20 de noviembre).
 
 ## 4. Fotos y catálogo (Cloudinary gratis)
 
@@ -98,7 +108,7 @@ entran aquí.
       el 17 de noviembre de 2026).
 - [ ] Revisar el stock (todas las piezas se importan con 1 unidad), el peso y las medidas del paquete,
       que hacen falta para calcular la tarifa GLS.
-- [ ] Borrar `service-account.json` del equipo.
+- [x] Borrar `service-account.json` del equipo (ausente en la comprobación local del 20 de noviembre).
 
 ## 5. Emails (Brevo gratis, 300/día)
 
@@ -107,46 +117,32 @@ entran aquí.
 - [x] SMTP y API → Claves API → generar una (`xkeysib-…`) y ponerla en `secretos.env` (`BREVO_API_KEY`).
       Los datos SMTP (smtp-relay.brevo.com) no hacen falta: la tienda usa la API.
 - [x] `BREVO_API_KEY` subida a Cloudflare. Emails enviándose bien (comprobado el 12 de noviembre de 2026).
-- [ ] Panel → Ajustes → Tienda: remitente vacío.
-- [ ] Con dominio propio: autenticar el dominio en Brevo (DKIM/DMARC en Cloudflare) y cambiar
-      `EMAIL_FROM` a una dirección del dominio, para que no caigan en spam.
 
 ## 6. Stripe (sin cuota; comisión por venta)
 
-- [ ] El vendedor crea la cuenta a su nombre y te invita como Desarrollador.
-- [ ] Poner `sk_test_…` en `secretos.env`, crear el webhook `/stripe/webhook` con sus 5 eventos, poner su
-      `whsec_…` y ejecutar `npm run secrets`.
-- [ ] Probar en modo test: pago correcto, rechazado, con 3D Secure y cancelado (el stock tiene que volver).
-- [ ] Pasar a real: el vendedor completa la verificación, se ponen `sk_live_…` y el `whsec_…` de un
-      webhook nuevo en modo real, y se vuelve a ejecutar `npm run secrets`.
+- [x] Acceso a Stripe recibido (confirmado por el usuario, 20 de noviembre).
+- [x] Cuenta y claves de Stripe configuradas (confirmado por el usuario, 20 de noviembre).
+- [ ] Crear el webhook live para `https://tienda.mivotunning.workers.dev/stripe/webhook` con los eventos
+      `checkout.session.completed`, `checkout.session.expired`,
+      `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` y `charge.refunded`;
+      guardar su `whsec_…` actual en `secretos.env` y volver a ejecutar `npm run secrets`.
+- [x] `npm run secrets` se ejecutó correctamente el 20 de noviembre; Cloudflare lista `STRIPE_WEBHOOK_SECRET`.
+      Volver a ejecutarlo después de guardar el `whsec_…` del webhook nuevo; el valor no es visible desde Cloudflare.
+- [ ] Probar un pago y confirmar que webhook, email, pedido y stock funcionan.
 
 ## 7. Panel (`/admin`)
 
-- [ ] Ajustes → Tienda: comprobar los datos legales (el aviso «Configuración pendiente» del dashboard
-      tiene que desaparecer).
-- [ ] Ajustes → Envíos: comprobar las tarifas GLS y activar o desactivar zonas.
-- [ ] Activar el checkout.
-- [ ] Crear una pieza desde el móvil con fotos y comprobar que sale en la tienda.
+- [x] Ajustes → Tienda: datos legales comprobados, garantía «1 año» guardada y aviso «Configuración pendiente» eliminado
+      (confirmado por el usuario el 20 de noviembre).
+- [ ] Ajustes → Envíos: comprobar las tarifas GLS, zonas y datos de los paquetes.
+- [ ] Activar el checkout para clientes después de verificar el webhook live.
 
-## 8. Dominio (lo único que se paga)
+## 8. Pruebas y cierre
 
-- [ ] Comprar el dominio en un registrador que acepte **transferencia bancaria o PayPal** (muchos
-      registradores españoles lo aceptan; comprobar los métodos de pago antes de registrarse). Solo el
-      dominio, sin extras, y mirando el precio de renovación. No comprarlo en Cloudflare: pide tarjeta o PayPal.
-- [ ] En el registrador, cambiar los servidores de nombres por los dos que da Cloudflare (gratis).
-- [ ] Cloudflare: añadir el dominio (plan Free) y los dominios personalizados `www` y raíz en el Worker.
-- [ ] `SITE_URL` en `wrangler.toml` y `npm run deploy`.
-- [ ] Añadir el dominio en Firebase → Authentication → Dominios autorizados.
-- [ ] Cambiar la URL del webhook de Stripe al dominio nuevo.
-- [ ] Google Search Console (gratis): verificar el dominio por DNS y enviar `sitemap.xml`.
-
-## 9. Pruebas y cierre
-
-- [ ] `npm test`, `npm run test:e2e` y `npm run test:responsive` en verde justo antes de abrir.
-- [ ] Un pedido completo de principio a fin: pago, email al comprador y a mivotunning@gmail.com, panel,
-      marcar como enviado con seguimiento GLS y consultarlo en `/pedido`.
+- [x] `npm test` (83/83), `npm run test:e2e` y `npm run test:responsive` en verde el 20 de noviembre
+      de 2026; repetir antes de abrir si hay cambios posteriores.
+- [ ] La compra de prueba en modo test se completó antes de abrir el checkout a clientes.
 - [x] Que no quede ningún «[pendiente: …]» en las páginas legales, de contacto o de envíos (se rellenan
       solos al completar el panel). En la app ya se muestra texto genérico si faltan datos y no un placeholder técnico.
 - [ ] Comprobar que ninguna cuenta tiene tarjeta guardada ni plan de pago: Firebase en **Spark**, Cloudflare en
       **Free** y Cloudinary en **Free**.
-- [ ] Decidir si se quita la vista previa de GitHub Pages (también gratis), para no tener dos webs indexadas.
